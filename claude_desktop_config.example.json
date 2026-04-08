@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "dolibarr_expert": {
+      "command": "node",
+      "args": [
+        "/CHEMIN/ABSOLU/VERS/VOTRE_DOSSIER/mcp dolobarr/build/index.js"
+      ],
+      "env": {
+        "DOLIBARR_URL": "https://votre-instance-dolibarr.com",
+        "DOLIBARR_API_KEY": "VOTRE_CLE_API"
+      }
+    }
+  }
+}
