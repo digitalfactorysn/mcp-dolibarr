@@ -79,7 +79,7 @@ npm install -g mcp-dolibarr
 
 ### Méthode 3 : Depuis le code source
 ```bash
-git clone https://github.com/digitalfactory-sn/mcp-dolibarr.git
+git clone https://github.com/digitalfactorysn/mcp-dolibarr.git
 cd mcp-dolibarr
 npm install && npm run build
 ```
