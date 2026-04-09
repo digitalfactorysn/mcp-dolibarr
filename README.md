@@ -7,7 +7,7 @@
 > Un serveur **Model Context Protocol (MCP)** complet pour Dolibarr ERP/CRM. Permets à n'importe quel assistant IA (Claude, Cursor, Windsurf, etc.) d'agir comme un **expert Dolibarr à part entière** : facturation, comptabilité avancée, CRM, projets, stocks, contrats, configuration complète du système et bien plus.
 > 
 > **Développé par [Digital Factory Senegal](https://digitalfactory.sn)**  
-> 🌐 [digitalfactory.sn](https://digitalfactory.sn) &nbsp;|&nbsp; 📞 WhatsApp : [+221 77 800 38 14](https://wa.me/221778003814) &nbsp;|&nbsp; 📧 [contact@digitalfactory.sn](mailto:contact@digitalfactory.sn)
+> 🌐 [digitalfactory.sn](https://digitalfactory.sn) &nbsp;|&nbsp; 📞 WhatsApp : [+221 77 800 38 14](https://wa.me/221778003814) &nbsp;|&nbsp; 📧 [infos@digitalfactory.sn](mailto:infos@digitalfactory.sn)
 
 ---
 
@@ -186,7 +186,7 @@ MIT © [Digital Factory Senegal](https://digitalfactory.sn)
 | Canal | Lien |
 |---|---|
 | 🌐 Site web | [digitalfactory.sn](https://digitalfactory.sn) |
-| 📧 Email | [contact@digitalfactory.sn](mailto:contact@digitalfactory.sn) |
+| 📧 Email | [infos@digitalfactory.sn](mailto:infos@digitalfactory.sn) |
 | 💬 WhatsApp | [+221 77 800 38 14](https://wa.me/221778003814) |
 | 🐙 GitHub | [github.com/digitalfactorysn](https://github.com/digitalfactorysn) |
 

@@ -1,6 +1,6 @@
 {
   "name": "mcp-dolibarr",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A comprehensive Model Context Protocol (MCP) server for Dolibarr ERP/CRM. Enables AI assistants (Claude, Cursor, Windsurf, etc.) to act as full Dolibarr experts: invoicing, accounting, CRM, HR, projects, configuration and much more.",
   "main": "build/index.js",
   "type": "module",
