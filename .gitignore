@@ -2,3 +2,5 @@ node_modules/
 build/
 .env
 *.log
+.mcp.json
+.claude/settings.local.json
