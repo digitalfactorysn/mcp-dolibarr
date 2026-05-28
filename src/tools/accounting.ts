@@ -110,7 +110,8 @@ export async function handleAccountingTool(name: string, args: Record<string, un
         type: args.fk_type || 'VIR',
       };
       const lineId = await api.post(`/bankaccounts/${args.account_id}/lines`, payload);
-      return `✅ Opération bancaire enregistrée. ID transaction: ${lineId}\nCompte: #${args.account_id} | Montant: ${args.amount}`;
+      return `✅ Opération bancaire enregistrée. ID transaction: ${lineId}
+Compte: #${args.account_id} | Montant: ${args.amount}`;
     }
     case 'list_accounting_accounts': {
       const params: Record<string, unknown> = { limit: args.limit || 200 };
