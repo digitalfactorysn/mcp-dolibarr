@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mcp-dolibarr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-dolibarr
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      - DOLIBARR_URL=${DOLIBARR_URL}
+      - DOLIBARR_API_KEY=${DOLIBARR_API_KEY}
+      - PORT=3100
+      - MCP_API_TOKEN=${MCP_API_TOKEN:-}
+    networks:
+      - 1panel-network
+    mem_limit: 256m
+    memswap_limit: 256m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  1panel-network:
+    external: true
