@@ -1,0 +1,44 @@
+# /etc/systemd/system/mcp-dolibarr.service
+# Service systemd pour le serveur MCP Dolibarr HTTP
+#
+# Installer :
+#   sudo cp mcp-dolibarr.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable mcp-dolibarr
+#   sudo systemctl start mcp-dolibarr
+#
+# Logs :
+#   sudo journalctl -u mcp-dolibarr -f
+
+[Unit]
+Description=MCP Dolibarr HTTP Server — Digital Factory Senegal
+Documentation=https://github.com/digitalfactorysn/mcp-dolibarr
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/mcp-dolibarr
+
+# Variables d'environnement
+EnvironmentFile=/opt/mcp-dolibarr/.env
+
+# Commande de démarrage
+ExecStart=/usr/bin/node /opt/mcp-dolibarr/build/http.js
+
+# Redémarrage automatique en cas d'erreur
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-dolibarr
+
+# Sécurité
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/mcp-dolibarr
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
