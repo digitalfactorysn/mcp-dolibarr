@@ -120,7 +120,10 @@ export async function handleProductTool(name: string, args: Record<string, unkno
         ...args,
       };
       const id = await api.post('/products', payload);
-      return `✅ Produit/Service créé avec succès.\nID: ${id}\nRef: ${args.ref}\nLabel: ${args.label}`;
+      return `✅ Produit/Service créé avec succès.
+ID: ${id}
+Ref: ${args.ref}
+Label: ${args.label}`;
     }
     case 'update_product': {
       const { id, ...rest } = args;
@@ -128,7 +131,7 @@ export async function handleProductTool(name: string, args: Record<string, unkno
       return `✅ Produit #${id} mis à jour.`;
     }
     case 'get_product_stock': {
-      const data = await api.get(`/products/${args.id}/stocks`);
+      const data = await api.get(`/products/${args.id}/stock`);
       return JSON.stringify(data, null, 2);
     }
     case 'update_product_stock': {
@@ -143,7 +146,8 @@ export async function handleProductTool(name: string, args: Record<string, unkno
       };
       await api.post('/stockmovements', payload);
       const direction = (args.qty as number) > 0 ? 'Entrée' : 'Sortie';
-      return `✅ Mouvement de stock enregistré.\n${direction} de ${Math.abs(args.qty as number)} unité(s) du produit #${args.product_id} dans l'entrepôt #${args.warehouse_id}.`;
+      return `✅ Mouvement de stock enregistré.
+${direction} de ${Math.abs(args.qty as number)} unité(s) du produit #${args.product_id} dans l'entrepôt #${args.warehouse_id}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);
