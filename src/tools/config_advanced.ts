@@ -243,6 +243,289 @@ export const configAdvancedTools: Tool[] = [
       required: ['modulepart', 'original_file'],
     },
   },
+  // ── CATÉGORIES ─────────────────────────────────────────────────────────────
+  {
+    name: 'get_category',
+    description: 'Obtenir les détails d\'une catégorie par son ID',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la catégorie' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_category',
+    description: 'Modifier une catégorie existante (libellé, couleur, parent)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la catégorie' },
+        label: { type: 'string', description: 'Nouveau libellé' },
+        description: { type: 'string', description: 'Nouvelle description' },
+        color: { type: 'string', description: 'Couleur hex (ex: #FF0000)' },
+        fk_parent: { type: 'number', description: 'ID catégorie parente (0 pour enlever parent)' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_category',
+    description: 'Supprimer une catégorie',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la catégorie à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_objects_in_category',
+    description: 'Lister les objets (tiers, produits, contacts...) appartenant à une catégorie',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category_id: { type: 'number', description: 'ID de la catégorie' },
+        object_type: { type: 'string', description: "'thirdparties', 'products', 'contacts', 'members', 'projects'" },
+        limit: { type: 'number', description: 'Nombre max (défaut: 100)' },
+      },
+      required: ['category_id', 'object_type'],
+    },
+  },
+  // ── CHAMPS PERSONNALISÉS (EXTRAFIELDS) ─────────────────────────────────────
+  {
+    name: 'get_extrafield',
+    description: 'Obtenir les détails d\'un champ personnalisé spécifique',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        elementtype: { type: 'string', description: "Type d'objet (ex: 'thirdparty', 'invoice')" },
+        attrname: { type: 'string', description: 'Nom technique du champ' },
+      },
+      required: ['elementtype', 'attrname'],
+    },
+  },
+  {
+    name: 'update_extrafield',
+    description: 'Modifier un champ personnalisé existant (libellé, visible, obligatoire)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        elementtype: { type: 'string', description: "Type d'objet cible" },
+        attrname: { type: 'string', description: 'Nom technique du champ' },
+        label: { type: 'string', description: 'Nouveau libellé' },
+        required: { type: 'number', description: '1=Obligatoire, 0=Optionnel' },
+        visible: { type: 'number', description: '1=Visible, 0=Masqué, -1=Masqué sur liste' },
+        default_value: { type: 'string', description: 'Nouvelle valeur par défaut' },
+        param: { type: 'string', description: "Pour type 'select': options 'val1:Libelle1;val2:Libelle2'" },
+      },
+      required: ['elementtype', 'attrname'],
+    },
+  },
+  // ── MODÈLES EMAIL ──────────────────────────────────────────────────────────
+  {
+    name: 'list_email_templates',
+    description: 'Lister les modèles d\'emails configurés (confirmations, relances, envoi de facture...)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        module: { type: 'string', description: "Filtrer par module (ex: 'invoice', 'order', 'proposal')" },
+        limit: { type: 'number', description: 'Nombre max (défaut: 100)' },
+      },
+    },
+  },
+  {
+    name: 'get_email_template',
+    description: 'Obtenir le contenu d\'un modèle d\'email',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du modèle d\'email' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_email_template',
+    description: 'Créer un nouveau modèle d\'email (supporte les balises Dolibarr: __CUSTOMER_NAME__, __INVOICE_REF__...)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'Nom du modèle' },
+        topic: { type: 'string', description: "Sujet de l'email" },
+        content: { type: 'string', description: "Corps de l'email (HTML ou texte)" },
+        module: { type: 'string', description: "Module associé (ex: 'invoice', 'order', 'all')" },
+        lang: { type: 'string', description: "Langue (ex: 'fr_FR', 'en_US'). Défaut: fr_FR" },
+        position: { type: 'number', description: 'Ordre d\'affichage' },
+      },
+      required: ['label', 'topic', 'content'],
+    },
+  },
+  {
+    name: 'update_email_template',
+    description: 'Modifier un modèle d\'email existant',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du modèle' },
+        label: { type: 'string', description: 'Nouveau nom' },
+        topic: { type: 'string', description: 'Nouveau sujet' },
+        content: { type: 'string', description: 'Nouveau contenu' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_email_template',
+    description: 'Supprimer un modèle d\'email',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du modèle à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  // ── DICTIONNAIRES COMPLÉMENTAIRES ──────────────────────────────────────────
+  {
+    name: 'list_regions',
+    description: 'Lister les régions géographiques par pays',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        country_id: { type: 'number', description: 'ID du pays (requis)' },
+        limit: { type: 'number', description: 'Nombre max (défaut: 200)' },
+      },
+      required: ['country_id'],
+    },
+  },
+  {
+    name: 'list_departments',
+    description: 'Lister les départements/provinces par pays ou région',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        country_id: { type: 'number', description: 'ID du pays' },
+        region_id: { type: 'number', description: 'ID de la région (optionnel pour affiner)' },
+        limit: { type: 'number', description: 'Nombre max (défaut: 300)' },
+      },
+    },
+  },
+  {
+    name: 'list_towns',
+    description: 'Lister les villes par département ou code postal',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        zipcode: { type: 'string', description: 'Code postal pour filtrer' },
+        town: { type: 'string', description: 'Nom de la ville pour filtrer' },
+        limit: { type: 'number', description: 'Nombre max (défaut: 100)' },
+      },
+    },
+  },
+  {
+    name: 'list_availability',
+    description: 'Lister les délais de disponibilité configurés (délais de livraison/traitement)',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_event_types',
+    description: 'Lister les types d\'événements pour l\'agenda',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_price_levels',
+    description: 'Lister les niveaux de prix configurés (tarification multi-niveaux)',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_typent',
+    description: 'Lister les types d\'entreprise/taille (PME, Grande entreprise, TPE...)',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  // ── MODÈLES PDF ────────────────────────────────────────────────────────────
+  {
+    name: 'list_pdf_models',
+    description: 'Lister les modèles de PDF disponibles pour un type d\'objet',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', description: "'invoice', 'order', 'proposal', 'supplier_invoice', 'supplier_order', 'contract', 'expedition'" },
+      },
+      required: ['type'],
+    },
+  },
+  // ── CONDITIONS DE PAIEMENT CRUD ────────────────────────────────────────────
+  {
+    name: 'create_payment_term',
+    description: 'Créer une nouvelle condition de paiement (ex: 30 jours net, 60 jours fin de mois)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: "Code unique (ex: '30NET')" },
+        libelle: { type: 'string', description: 'Libellé affiché (ex: 30 jours net)' },
+        libelle_facture: { type: 'string', description: 'Libellé sur facture' },
+        nbjour: { type: 'number', description: 'Nombre de jours' },
+        type_cdr: { type: 'number', description: '0=Jours calendaires, 1=Fin de mois' },
+        decalage: { type: 'number', description: 'Décalage en jours après fin de mois (si type_cdr=1)' },
+      },
+      required: ['code', 'libelle'],
+    },
+  },
+  {
+    name: 'create_payment_method',
+    description: 'Créer un nouveau mode de paiement (ex: Mobile Money, Virement interne)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: "Code unique (ex: 'MOMO')" },
+        libelle: { type: 'string', description: 'Libellé (ex: Mobile Money)' },
+        type: { type: 'string', description: "'payment'" },
+      },
+      required: ['code', 'libelle'],
+    },
+  },
+  // ── VARIABLES DE CONFIGURATION ────────────────────────────────────────────
+  {
+    name: 'get_setup_value',
+    description: 'Lire la valeur d\'une constante de configuration spécifique',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        constant: { type: 'string', description: "Nom de la constante (ex: 'MAIN_DEFAULT_LANGUAGE', 'INVOICE_NUMBERING_MODEL')" },
+      },
+      required: ['constant'],
+    },
+  },
+  {
+    name: 'delete_setup_value',
+    description: 'Supprimer une constante de configuration Dolibarr (la remet à sa valeur par défaut)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        constant: { type: 'string', description: "Nom de la constante à supprimer" },
+      },
+      required: ['constant'],
+    },
+  },
+  // ── TICKETS ────────────────────────────────────────────────────────────────
+  {
+    name: 'list_ticket_categories',
+    description: 'Lister les catégories de tickets support',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_ticket_severities',
+    description: 'Lister les niveaux de gravité des tickets support',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_ticket_types',
+    description: 'Lister les types de tickets support',
+    inputSchema: { type: 'object', properties: {} },
+  },
 ];
 
 export async function handleConfigAdvancedTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -399,6 +682,162 @@ export async function handleConfigAdvancedTool(name: string, args: Record<string
     case 'delete_document': {
       await api.delete(`/documents?modulepart=${args.modulepart}&original_file=${encodeURIComponent(args.original_file as string)}`);
       return `✅ Document supprimé.`;
+    }
+
+    // ── CATÉGORIES ─────────────────────────────────────────────────────────
+    case 'get_category': {
+      const data = await api.get(`/categories/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_category': {
+      const { id, ...rest } = args;
+      await api.put(`/categories/${id}`, rest);
+      return `✅ Catégorie #${id} mise à jour.`;
+    }
+    case 'delete_category': {
+      await api.delete(`/categories/${args.id}`);
+      return `✅ Catégorie #${args.id} supprimée.`;
+    }
+    case 'list_objects_in_category': {
+      const data = await api.get(`/categories/${args.category_id}/${args.object_type}`, { limit: args.limit || 100 });
+      return JSON.stringify(data, null, 2);
+    }
+
+    // ── EXTRAFIELDS ────────────────────────────────────────────────────────
+    case 'get_extrafield': {
+      const data = await api.get(`/extrafields`, { elementtype: args.elementtype, attrname: args.attrname });
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_extrafield': {
+      const { elementtype, attrname, ...rest } = args;
+      await api.put(`/extrafields/${elementtype}/${attrname}`, rest);
+      return `✅ Extrafield '${attrname}' (${elementtype}) mis à jour.`;
+    }
+
+    // ── MODÈLES EMAIL ─────────────────────────────────────────────────────
+    case 'list_email_templates': {
+      const params: Record<string, unknown> = { limit: args.limit || 100 };
+      if (args.module) params.module = args.module;
+      const data = await api.get('/setup/emailtemplates', params);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'get_email_template': {
+      const data = await api.get(`/setup/emailtemplates/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'create_email_template': {
+      const payload = {
+        label: args.label,
+        topic: args.topic,
+        content: args.content,
+        module: args.module || 'all',
+        lang: args.lang || 'fr_FR',
+        position: args.position || 0,
+        active: 1,
+      };
+      const id = await api.post('/setup/emailtemplates', payload);
+      return `✅ Modèle d'email '${args.label}' créé. ID: ${id}`;
+    }
+    case 'update_email_template': {
+      const { id, ...rest } = args;
+      await api.put(`/setup/emailtemplates/${id}`, rest);
+      return `✅ Modèle d'email #${id} mis à jour.`;
+    }
+    case 'delete_email_template': {
+      await api.delete(`/setup/emailtemplates/${args.id}`);
+      return `✅ Modèle d'email #${args.id} supprimé.`;
+    }
+
+    // ── DICTIONNAIRES ─────────────────────────────────────────────────────
+    case 'list_regions': {
+      const params: Record<string, unknown> = { country_id: args.country_id, limit: args.limit || 200 };
+      const data = await api.get('/setup/dictionary/regions', params);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_departments': {
+      const params: Record<string, unknown> = { limit: args.limit || 300 };
+      if (args.country_id) params.country_id = args.country_id;
+      if (args.region_id) params.region_id = args.region_id;
+      const data = await api.get('/setup/dictionary/departments', params);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_towns': {
+      const params: Record<string, unknown> = { limit: args.limit || 100 };
+      if (args.zipcode) params.zipcode = args.zipcode;
+      if (args.town) params.town = args.town;
+      const data = await api.get('/setup/dictionary/towns', params);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_availability': {
+      const data = await api.get('/setup/dictionary/availability');
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_event_types': {
+      const data = await api.get('/setup/dictionary/event_types');
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_price_levels': {
+      const data = await api.get('/setup/dictionary/price_levels');
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_typent': {
+      const data = await api.get('/setup/dictionary/typent');
+      return JSON.stringify(data, null, 2);
+    }
+
+    // ── MODÈLES PDF ───────────────────────────────────────────────────────
+    case 'list_pdf_models': {
+      const data = await api.get(`/setup/models/${args.type}`);
+      return JSON.stringify(data, null, 2);
+    }
+
+    // ── CONDITIONS & MODES DE PAIEMENT ────────────────────────────────────
+    case 'create_payment_term': {
+      const payload = {
+        code: args.code,
+        libelle: args.libelle,
+        libelle_facture: args.libelle_facture || args.libelle,
+        nbjour: args.nbjour || 0,
+        type_cdr: args.type_cdr || 0,
+        decalage: args.decalage || 0,
+        active: 1,
+      };
+      const id = await api.post('/setup/dictionary/payment_terms', payload);
+      return `✅ Condition de paiement '${args.libelle}' créée. ID: ${id}`;
+    }
+    case 'create_payment_method': {
+      const payload = {
+        code: args.code,
+        libelle: args.libelle,
+        type: args.type || 'payment',
+        active: 1,
+      };
+      const id = await api.post('/setup/dictionary/payment_types', payload);
+      return `✅ Mode de paiement '${args.libelle}' créé. ID: ${id}`;
+    }
+
+    // ── CONSTANTES ────────────────────────────────────────────────────────
+    case 'get_setup_value': {
+      const data = await api.get('/setup/conf', { sqlfilters: `(t.name:='${args.constant}')` });
+      return JSON.stringify(data, null, 2);
+    }
+    case 'delete_setup_value': {
+      await api.delete(`/setup/conf/${args.constant}`);
+      return `✅ Constante '${args.constant}' supprimée (remise à sa valeur par défaut).`;
+    }
+
+    // ── TICKETS ───────────────────────────────────────────────────────────
+    case 'list_ticket_categories': {
+      const data = await api.get('/setup/dictionary/ticket_categories');
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_ticket_severities': {
+      const data = await api.get('/setup/dictionary/ticket_severities');
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_ticket_types': {
+      const data = await api.get('/setup/dictionary/ticket_types');
+      return JSON.stringify(data, null, 2);
     }
 
     default:
