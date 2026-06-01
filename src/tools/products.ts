@@ -80,6 +80,56 @@ export const productTools: Tool[] = [
     },
   },
   {
+    name: 'delete_product',
+    description: 'Supprimer un produit/service du catalogue (impossible s\'il est utilisé dans des documents)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_product_by_ref',
+    description: 'Rechercher un produit par sa référence ou son code barre',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'Référence produit ou code barre' },
+        type: { type: 'string', description: "'ref' ou 'barcode' (défaut: ref)" },
+      },
+      required: ['ref'],
+    },
+  },
+  {
+    name: 'list_product_price_levels',
+    description: 'Lister les niveaux de prix d\'un produit (tarifs par niveau/catégorie client)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_product_price_level',
+    description: 'Définir ou modifier le prix d\'un niveau tarifaire pour un produit',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit' },
+        pricerevel: { type: 'number', description: 'Niveau de prix (1, 2, 3...)' },
+        price: { type: 'number', description: 'Prix HT pour ce niveau' },
+        price_ttc: { type: 'number', description: 'Prix TTC (calculé si price fourni)' },
+        price_base_type: { type: 'string', description: "'HT' ou 'TTC'" },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+      },
+      required: ['id', 'pricerevel', 'price'],
+    },
+  },
+  {
     name: 'update_product_stock',
     description: "Effectuer un mouvement de stock (entrée ou sortie) pour un produit",
     inputSchema: {
@@ -144,6 +194,24 @@ export async function handleProductTool(name: string, args: Record<string, unkno
       await api.post('/stockmovements', payload);
       const direction = (args.qty as number) > 0 ? 'Entrée' : 'Sortie';
       return `✅ Mouvement de stock enregistré.\n${direction} de ${Math.abs(args.qty as number)} unité(s) du produit #${args.product_id} dans l'entrepôt #${args.warehouse_id}.`;
+    }
+    case 'delete_product': {
+      await api.delete(`/products/${args.id}`);
+      return `✅ Produit #${args.id} supprimé.`;
+    }
+    case 'get_product_by_ref': {
+      const type = args.type || 'ref';
+      const data = await api.get(`/products/${type === 'barcode' ? 'barcode' : 'ref'}/${encodeURIComponent(args.ref as string)}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_product_price_levels': {
+      const data = await api.get(`/products/${args.id}/selling_multiprices_per_tva_tx`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_product_price_level': {
+      const { id, ...payload } = args;
+      await api.post(`/products/${id}/setpricerevel`, payload);
+      return `✅ Niveau de prix ${args.pricerevel} du produit #${id} mis à jour : ${args.price} HT`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

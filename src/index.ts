@@ -25,6 +25,9 @@ import {
 } from "./tools/crm_projects_hr.js";
 import { setupTools, handleSetupTool } from "./tools/setup.js";
 import { adminTools, handleAdminTool } from "./tools/admin.js";
+import { supplierInvoiceTools, handleSupplierInvoiceTool } from "./tools/supplier_invoices.js";
+import { configAdvancedTools, handleConfigAdvancedTool } from "./tools/config_advanced.js";
+import { stockWarehouseTools, handleStockWarehouseTool } from "./tools/stock_warehouses.js";
 
 dotenv.config();
 
@@ -61,6 +64,9 @@ const ALL_TOOLS = [
   ...contractTools,
   ...setupTools,
   ...adminTools,
+  ...supplierInvoiceTools,
+  ...configAdvancedTools,
+  ...stockWarehouseTools,
 ];
 
 // Build a lookup map: tool name -> category handler
@@ -72,7 +78,7 @@ const TOOL_NAME_SET = new Set(ALL_TOOLS.map((t) => t.name));
 const server = new Server(
   {
     name: "mcp-dolibarr",
-    version: "2.1.0",
+    version: "3.0.0",
   },
   {
     capabilities: {
@@ -123,6 +129,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await handleSetupTool(name, safeArgs, api);
     } else if (adminTools.some((t) => t.name === name)) {
       result = await handleAdminTool(name, safeArgs, api);
+    } else if (supplierInvoiceTools.some((t) => t.name === name)) {
+      result = await handleSupplierInvoiceTool(name, safeArgs, api);
+    } else if (configAdvancedTools.some((t) => t.name === name)) {
+      result = await handleConfigAdvancedTool(name, safeArgs, api);
+    } else if (stockWarehouseTools.some((t) => t.name === name)) {
+      result = await handleStockWarehouseTool(name, safeArgs, api);
     } else {
       throw new McpError(ErrorCode.MethodNotFound, `Outil non assigné à un module: "${name}"`);
     }
@@ -154,7 +166,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`✅ MCP Dolibarr Expert Server v2.1.0 démarré (${ALL_TOOLS.length} outils disponibles)`);
+  console.error(`✅ MCP Dolibarr Expert Server v3.0.0 démarré (${ALL_TOOLS.length} outils disponibles)`);
   console.error(`   Instance Dolibarr: ${DOLIBARR_URL}`);
 }
 

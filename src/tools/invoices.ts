@@ -136,6 +136,42 @@ export const invoiceTools: Tool[] = [
     },
   },
   {
+    name: 'delete_invoice',
+    description: 'Supprimer une facture brouillon (impossible une fois validée)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la facture brouillon à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_invoice_payments',
+    description: 'Lister tous les paiements enregistrés sur une facture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la facture' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'send_proposal_email',
+    description: 'Envoyer un devis/proposition commerciale par email au client',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis' },
+        sendto: { type: 'string', description: 'Email destinataire' },
+        subject: { type: 'string', description: "Sujet de l'email" },
+        message: { type: 'string', description: "Corps du message" },
+      },
+      required: ['id', 'sendto'],
+    },
+  },
+  {
     name: 'create_credit_note',
     description: "Créer un avoir (facture de crédit) à partir d'une facture existante",
     inputSchema: {
@@ -216,6 +252,24 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       };
       const paymentId = await api.post('/invoices/paymentsdistributed', payload);
       return `✅ Paiement de ${amount} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
+    }
+    case 'delete_invoice': {
+      await api.delete(`/invoices/${args.id}`);
+      return `✅ Facture brouillon #${args.id} supprimée.`;
+    }
+    case 'list_invoice_payments': {
+      const data = await api.get(`/invoices/${args.id}/payments`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'send_proposal_email': {
+      const payload = {
+        sendto: args.sendto,
+        subject: args.subject || 'Votre devis',
+        message: args.message || 'Veuillez trouver ci-joint votre devis.',
+        attach_pdf: 1,
+      };
+      await api.post(`/proposals/${args.id}/sendbyemail`, payload);
+      return `✅ Devis #${args.id} envoyé par email à ${args.sendto}.`;
     }
     case 'create_credit_note': {
       const sourceInvoice = await api.get<Record<string, unknown>>(`/invoices/${args.source_invoice_id}`);

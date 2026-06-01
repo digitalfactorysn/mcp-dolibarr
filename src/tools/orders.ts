@@ -136,6 +136,70 @@ export const supplierOrderTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'update_order_line',
+    description: 'Modifier une ligne d\'une commande client (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        desc: { type: 'string', description: 'Description' },
+        subprice: { type: 'number', description: 'Prix unitaire HT' },
+        qty: { type: 'number', description: 'Quantité' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        remise_percent: { type: 'number', description: 'Remise %' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'delete_order_line',
+    description: 'Supprimer une ligne d\'une commande client (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande' },
+        lineid: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'cancel_order',
+    description: 'Annuler une commande client validée',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande à annuler' },
+        comment: { type: 'string', description: 'Motif d\'annulation' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_supplier_order',
+    description: 'Obtenir les détails d\'une commande fournisseur (lignes, statut, réceptions)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'receive_supplier_order',
+    description: 'Enregistrer la réception d\'une commande fournisseur (incrémente le stock)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur' },
+        warehouse_id: { type: 'number', description: 'ID de l\'entrepôt de réception' },
+      },
+      required: ['id', 'warehouse_id'],
+    },
+  },
 ];
 
 export async function handleOrderTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -190,6 +254,27 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     case 'validate_supplier_order': {
       await api.post(`/supplierorders/${args.id}/validate`, {});
       return `✅ Commande fournisseur #${args.id} validée.`;
+    }
+    case 'update_order_line': {
+      const { id, lineid, ...rest } = args;
+      await api.put(`/orders/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} de la commande #${id} mise à jour.`;
+    }
+    case 'delete_order_line': {
+      await api.delete(`/orders/${args.id}/lines/${args.lineid}`);
+      return `✅ Ligne #${args.lineid} supprimée de la commande #${args.id}.`;
+    }
+    case 'cancel_order': {
+      await api.post(`/orders/${args.id}/cancel`, { idwarehouse: 0 });
+      return `✅ Commande #${args.id} annulée.${args.comment ? ` Motif: ${args.comment}` : ''}`;
+    }
+    case 'get_supplier_order': {
+      const data = await api.get(`/supplierorders/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'receive_supplier_order': {
+      await api.post(`/supplierorders/${args.id}/receive`, { warehouse_id: args.warehouse_id });
+      return `✅ Réception de la commande fournisseur #${args.id} enregistrée dans l'entrepôt #${args.warehouse_id}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

@@ -118,6 +118,80 @@ export const thirdpartyTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'delete_thirdparty',
+    description: 'Supprimer un tiers (impossible si des documents sont liés)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_thirdparty_supplier_invoices',
+    description: "Lister les factures fournisseur d'un tiers",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers fournisseur' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_thirdparty_outstanding',
+    description: "Obtenir la balance client (encours) d'un tiers : montants dus, en retard, limites de crédit",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+        mode: { type: 'string', description: "'customer' ou 'supplier' (défaut: customer)" },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_thirdparty_bank_accounts',
+    description: "Lister les RIB/IBAN/coordonnées bancaires d'un tiers",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_thirdparty_bank_account',
+    description: "Ajouter un RIB/IBAN à un tiers",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+        label: { type: 'string', description: 'Libellé du compte (ex: Compte principal)' },
+        bank: { type: 'string', description: 'Nom de la banque' },
+        iban: { type: 'string', description: 'IBAN' },
+        bic: { type: 'string', description: 'BIC/SWIFT' },
+        rum: { type: 'string', description: 'Référence mandat (prélèvement)' },
+        branch: { type: 'string', description: 'Agence bancaire' },
+      },
+      required: ['id', 'bank'],
+    },
+  },
+  {
+    name: 'merge_thirdparties',
+    description: 'Fusionner deux tiers (le tiers source est absorbé par le tiers cible, ses documents sont rattachés au cible)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id_to_keep: { type: 'number', description: 'ID du tiers à conserver' },
+        id_to_merge: { type: 'number', description: 'ID du tiers à fusionner (sera supprimé après fusion)' },
+      },
+      required: ['id_to_keep', 'id_to_merge'],
+    },
+  },
 ];
 
 export async function handleThirdpartyTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -162,6 +236,32 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
     case 'get_thirdparty_contacts': {
       const data = await api.get(`/thirdparties/${args.id}/contacts`);
       return JSON.stringify(data, null, 2);
+    }
+    case 'delete_thirdparty': {
+      await api.delete(`/thirdparties/${args.id}`);
+      return `✅ Tiers #${args.id} supprimé.`;
+    }
+    case 'get_thirdparty_supplier_invoices': {
+      const data = await api.get(`/thirdparties/${args.id}/supplierinvoices`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'get_thirdparty_outstanding': {
+      const mode = args.mode || 'customer';
+      const data = await api.get(`/thirdparties/${args.id}/outstandinginvoices`, { mode });
+      return JSON.stringify(data, null, 2);
+    }
+    case 'get_thirdparty_bank_accounts': {
+      const data = await api.get(`/thirdparties/${args.id}/bankaccounts`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'create_thirdparty_bank_account': {
+      const { id, ...payload } = args;
+      const newId = await api.post(`/thirdparties/${id}/bankaccounts`, payload);
+      return `✅ Compte bancaire ajouté au tiers #${id}. ID: ${newId}`;
+    }
+    case 'merge_thirdparties': {
+      await api.put(`/thirdparties/${args.id_to_keep}/merge/${args.id_to_merge}`, {});
+      return `✅ Tiers fusionnés. Le tiers #${args.id_to_merge} a été absorbé par #${args.id_to_keep}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

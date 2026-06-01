@@ -84,6 +84,152 @@ export const accountingTools: Tool[] = [
     },
   },
   {
+    name: 'create_accounting_account',
+    description: 'Créer un nouveau compte dans le plan comptable',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        account_number: { type: 'string', description: 'Numéro de compte (ex: 411500)' },
+        label: { type: 'string', description: 'Libellé du compte' },
+        fk_pcg_version: { type: 'string', description: "Plan comptable: 'PCG99-BASE', 'SYSCOHADA', etc." },
+        pcg_type: { type: 'string', description: "Type: 'CUST', 'SUPPLIER', 'BANK', 'FISC', 'OTHER'" },
+        active: { type: 'number', description: '1=Actif (défaut), 0=Inactif' },
+      },
+      required: ['account_number', 'label'],
+    },
+  },
+  {
+    name: 'update_accounting_account',
+    description: 'Modifier un compte comptable (libellé, type, statut)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du compte comptable' },
+        account_number: { type: 'string', description: 'Numéro de compte' },
+        label: { type: 'string', description: 'Nouveau libellé' },
+        active: { type: 'number', description: '1=Actif, 0=Inactif' },
+        pcg_type: { type: 'string', description: "Type de compte" },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_accounting_account',
+    description: 'Supprimer un compte comptable (impossible s\'il a des écritures)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du compte comptable à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_accounting_journal',
+    description: 'Créer un nouveau journal comptable',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Code du journal (ex: OD, REC, PAY)' },
+        label: { type: 'string', description: 'Libellé du journal' },
+        nature: { type: 'number', description: '1=Ventes, 2=Achats, 3=Banque, 4=Caisse, 5=OD, 9=Export' },
+        active: { type: 'number', description: '1=Actif (défaut)' },
+      },
+      required: ['code', 'label', 'nature'],
+    },
+  },
+  {
+    name: 'update_accounting_journal',
+    description: 'Modifier un journal comptable',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du journal' },
+        label: { type: 'string', description: 'Nouveau libellé' },
+        active: { type: 'number', description: '1=Actif, 0=Inactif' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'write_accounting_entry',
+    description: 'Créer une écriture comptable manuelle (OD — pièce d\'ordre). Chaque écriture doit être équilibrée (total débit = total crédit).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        journal_code: { type: 'string', description: 'Code du journal (ex: OD)' },
+        date: { type: 'string', description: 'Date de l\'écriture ISO 8601' },
+        piece_num: { type: 'string', description: 'Numéro de pièce (référence)' },
+        label: { type: 'string', description: 'Libellé général de l\'écriture' },
+        lines: {
+          type: 'array',
+          description: 'Lignes de l\'écriture (doit être équilibrée: sum(debit) = sum(credit))',
+          items: {
+            type: 'object',
+            properties: {
+              account_number: { type: 'string', description: 'Numéro de compte' },
+              subledger_account: { type: 'string', description: 'Compte auxiliaire (tiers)' },
+              label: { type: 'string', description: 'Libellé de la ligne' },
+              debit: { type: 'number', description: 'Montant débit (0 si crédit)' },
+              credit: { type: 'number', description: 'Montant crédit (0 si débit)' },
+            },
+          },
+        },
+      },
+      required: ['journal_code', 'date', 'label', 'lines'],
+    },
+  },
+  {
+    name: 'create_bank_account',
+    description: 'Créer un nouveau compte bancaire dans Dolibarr',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'Référence du compte (ex: BNK-PRINCIPALE)' },
+        label: { type: 'string', description: 'Libellé du compte' },
+        type: { type: 'string', description: "'BANK', 'CASH', 'OTHER'" },
+        bank: { type: 'string', description: 'Nom de la banque' },
+        iban: { type: 'string', description: 'IBAN' },
+        bic: { type: 'string', description: 'BIC/SWIFT' },
+        currency_code: { type: 'string', description: "Code devise (ex: 'XOF', 'EUR', 'USD')" },
+        account_number: { type: 'string', description: 'Numéro de compte bancaire' },
+        fk_accountancy_journal: { type: 'number', description: 'ID journal comptable associé' },
+      },
+      required: ['ref', 'label'],
+    },
+  },
+  {
+    name: 'update_bank_account',
+    description: 'Modifier les informations d\'un compte bancaire',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du compte bancaire' },
+        label: { type: 'string' },
+        bank: { type: 'string' },
+        iban: { type: 'string' },
+        bic: { type: 'string' },
+        status: { type: 'number', description: '1=Actif, 0=Inactif' },
+        fk_accountancy_journal: { type: 'number', description: 'ID journal comptable associé' },
+        accountancy_journal: { type: 'string', description: 'Code journal (ex: BNK)' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'reconcile_bank_line',
+    description: 'Pointer/lettrer une transaction bancaire (rapprochement bancaire)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        account_id: { type: 'number', description: 'ID du compte bancaire' },
+        line_id: { type: 'number', description: 'ID de la transaction bancaire' },
+        num_releve: { type: 'string', description: 'Numéro de relevé bancaire' },
+      },
+      required: ['account_id', 'line_id', 'num_releve'],
+    },
+  },
+  {
     name: 'get_balance_generale',
     description: 'Générer la balance générale comptable : solde débit/crédit par compte sur une période. Nécessite le module Comptabilité Avancée.',
     inputSchema: {
@@ -212,6 +358,81 @@ export async function handleAccountingTool(name: string, args: Record<string, un
         nb_comptes_bancaires: bankArr.length,
       }, null, 2);
     }
+    case 'create_accounting_account': {
+      const payload = {
+        account_number: args.account_number,
+        label: args.label,
+        fk_pcg_version: args.fk_pcg_version || 'PCG99-BASE',
+        pcg_type: args.pcg_type || 'OTHER',
+        active: args.active !== undefined ? args.active : 1,
+      };
+      const id = await api.post('/accountancy/account', payload);
+      return `✅ Compte comptable créé. ID: ${id} | N°: ${args.account_number} | Libellé: ${args.label}`;
+    }
+
+    case 'update_accounting_account': {
+      const { id, ...rest } = args;
+      await api.put(`/accountancy/account/${id}`, rest);
+      return `✅ Compte comptable #${id} mis à jour.`;
+    }
+
+    case 'delete_accounting_account': {
+      await api.delete(`/accountancy/account/${args.id}`);
+      return `✅ Compte comptable #${args.id} supprimé.`;
+    }
+
+    case 'create_accounting_journal': {
+      const id = await api.post('/accountancy/journal', args);
+      return `✅ Journal comptable créé. ID: ${id} | Code: ${args.code} | Libellé: ${args.label}`;
+    }
+
+    case 'update_accounting_journal': {
+      const { id, ...rest } = args;
+      await api.put(`/accountancy/journal/${id}`, rest);
+      return `✅ Journal #${id} mis à jour.`;
+    }
+
+    case 'write_accounting_entry': {
+      const lines = args.lines as Array<Record<string, unknown>>;
+      const totalDebit = lines.reduce((s, l) => s + Number(l.debit || 0), 0);
+      const totalCredit = lines.reduce((s, l) => s + Number(l.credit || 0), 0);
+      if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        return `❌ Écriture déséquilibrée: Total débit=${totalDebit.toFixed(2)} ≠ Total crédit=${totalCredit.toFixed(2)}. L'écriture doit être équilibrée.`;
+      }
+      const dateTs = Math.floor(new Date(args.date as string).getTime() / 1000);
+      const entries = lines.map(l => ({
+        journal_code: args.journal_code,
+        doc_date: dateTs,
+        piece_num: args.piece_num || '',
+        label: l.label || args.label,
+        numero_compte_generale: l.account_number,
+        subledger_account: l.subledger_account || '',
+        subledger_label: l.subledger_label || '',
+        debit: Number(l.debit || 0),
+        credit: Number(l.credit || 0),
+      }));
+      const results = await Promise.all(entries.map(e => api.post('/accountancy/bookkeeping', e)));
+      return `✅ Écriture comptable créée (${lines.length} lignes).\nJournal: ${args.journal_code} | Montant: ${totalDebit.toFixed(2)}\nIDs: ${results.join(', ')}`;
+    }
+
+    case 'create_bank_account': {
+      const id = await api.post('/bankaccounts', args);
+      return `✅ Compte bancaire créé. ID: ${id} | Ref: ${args.ref} | Libellé: ${args.label}`;
+    }
+
+    case 'update_bank_account': {
+      const { id, ...rest } = args;
+      await api.put(`/bankaccounts/${id}`, rest);
+      return `✅ Compte bancaire #${id} mis à jour.`;
+    }
+
+    case 'reconcile_bank_line': {
+      await api.post(`/bankaccounts/${args.account_id}/lines/${args.line_id}/reconcile`, {
+        num_releve: args.num_releve,
+      });
+      return `✅ Transaction #${args.line_id} pointée sur le relevé '${args.num_releve}'.`;
+    }
+
     case 'get_balance_generale': {
       const params: Record<string, unknown> = { limit: args.limit || 5000 };
       if (args.date_start) params.date_start = Math.floor(new Date(args.date_start as string).getTime() / 1000);

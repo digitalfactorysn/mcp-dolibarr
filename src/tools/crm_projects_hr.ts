@@ -67,6 +67,48 @@ export const crmTools: Tool[] = [
       required: ['label', 'datep'],
     },
   },
+  {
+    name: 'get_contact',
+    description: 'Obtenir les détails complets d\'un contact',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID du contact' } }, required: ['id'] },
+  },
+  {
+    name: 'update_contact',
+    description: 'Modifier les informations d\'un contact',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contact' },
+        lastname: { type: 'string' }, firstname: { type: 'string' }, email: { type: 'string' },
+        phone_pro: { type: 'string' }, phone_mobile: { type: 'string' }, job: { type: 'string' },
+        note_public: { type: 'string' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_contact',
+    description: 'Supprimer un contact',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID du contact' } }, required: ['id'] },
+  },
+  {
+    name: 'update_agenda_event',
+    description: 'Modifier un événement CRM',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'événement' },
+        label: { type: 'string' }, datep: { type: 'string' }, datep2: { type: 'string' },
+        note: { type: 'string' }, status: { type: 'number', description: '0=A faire, 1=Terminé' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_agenda_event',
+    description: 'Supprimer un événement CRM',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de l\'événement' } }, required: ['id'] },
+  },
 ];
 
 export const projectTools: Tool[] = [
@@ -142,6 +184,51 @@ export const projectTools: Tool[] = [
       required: ['project_id', 'label'],
     },
   },
+  {
+    name: 'update_task',
+    description: 'Modifier une tâche (avancement, dates, assignation)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche' },
+        label: { type: 'string' }, description: { type: 'string' },
+        progress: { type: 'number', description: 'Avancement 0-100' },
+        date_start: { type: 'string' }, date_end: { type: 'string' },
+        planned_workload: { type: 'number', description: 'Charge planifiée en heures' },
+      },
+      required: ['project_id', 'task_id'],
+    },
+  },
+  {
+    name: 'add_task_timespent',
+    description: 'Enregistrer du temps passé sur une tâche (saisie de temps)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche' },
+        date: { type: 'string', description: 'Date ISO 8601' },
+        duration: { type: 'number', description: 'Durée en secondes (ex: 3600 pour 1h)' },
+        note: { type: 'string', description: 'Note/commentaire' },
+        fk_user: { type: 'number', description: 'ID utilisateur (défaut: utilisateur courant)' },
+      },
+      required: ['project_id', 'task_id', 'date', 'duration'],
+    },
+  },
+  {
+    name: 'list_task_timespents',
+    description: 'Lister les saisies de temps d\'une tâche ou d\'un projet',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche (optionnel)' },
+        limit: { type: 'number' },
+      },
+      required: ['project_id'],
+    },
+  },
 ];
 
 export const hrTools: Tool[] = [
@@ -168,6 +255,21 @@ export const hrTools: Tool[] = [
       },
     },
   },
+  {
+    name: 'get_expense',
+    description: 'Obtenir les détails d\'une note de frais',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la note de frais' } }, required: ['id'] },
+  },
+  {
+    name: 'validate_expense',
+    description: 'Valider une note de frais (la soumettre pour approbation)',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la note de frais' } }, required: ['id'] },
+  },
+  {
+    name: 'approve_expense',
+    description: 'Approuver une note de frais (nécessite les droits RH)',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la note de frais' } }, required: ['id'] },
+  },
 ];
 
 export const contractTools: Tool[] = [
@@ -181,6 +283,75 @@ export const contractTools: Tool[] = [
         thirdparty_id: { type: 'number', description: 'Filtrer par tiers' },
         status: { type: 'number', description: '0=Brouillon, 1=Validé, 2=Actif, 3=Expiré' },
       },
+    },
+  },
+  {
+    name: 'get_contract',
+    description: 'Obtenir les détails d\'un contrat (lignes, services, statut)',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID du contrat' } }, required: ['id'] },
+  },
+  {
+    name: 'validate_contract',
+    description: 'Valider un contrat brouillon',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID du contrat' } }, required: ['id'] },
+  },
+  {
+    name: 'close_contract',
+    description: 'Clôturer un contrat (marquer comme terminé)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        note_private: { type: 'string', description: 'Note de clôture' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'add_contract_line',
+    description: 'Ajouter une ligne de service à un contrat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        fk_product: { type: 'number', description: 'ID produit/service' },
+        subprice: { type: 'number', description: 'Prix unitaire HT' },
+        qty: { type: 'number', description: 'Quantité' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        desc: { type: 'string', description: 'Description' },
+        date_start: { type: 'string', description: 'Date début service ISO 8601' },
+        date_end: { type: 'string', description: 'Date fin service ISO 8601' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'activate_contract_line',
+    description: 'Activer une ligne de service d\'un contrat (démarre la facturation récurrente)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        date_start: { type: 'string', description: 'Date d\'activation ISO 8601' },
+        date_end: { type: 'string', description: 'Date de fin de service ISO 8601' },
+        comment: { type: 'string', description: 'Commentaire' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'close_contract_line',
+    description: 'Clôturer une ligne de service d\'un contrat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        date_end: { type: 'string', description: 'Date de fin ISO 8601' },
+        comment: { type: 'string', description: 'Motif de clôture' },
+      },
+      required: ['id', 'lineid'],
     },
   },
   {
@@ -221,6 +392,30 @@ export async function handleCrmTool(name: string, args: Record<string, unknown>,
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/agendaevents', params);
       return JSON.stringify(data, null, 2);
+    }
+    case 'get_contact': {
+      const data = await api.get(`/contacts/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_contact': {
+      const { id, ...rest } = args;
+      await api.put(`/contacts/${id}`, rest);
+      return `✅ Contact #${id} mis à jour.`;
+    }
+    case 'delete_contact': {
+      await api.delete(`/contacts/${args.id}`);
+      return `✅ Contact #${args.id} supprimé.`;
+    }
+    case 'update_agenda_event': {
+      const { id, ...rest } = args;
+      if (rest.datep) rest.datep = Math.floor(new Date(rest.datep as string).getTime() / 1000);
+      if (rest.datep2) rest.datep2 = Math.floor(new Date(rest.datep2 as string).getTime() / 1000);
+      await api.put(`/agendaevents/${id}`, rest);
+      return `✅ Événement CRM #${id} mis à jour.`;
+    }
+    case 'delete_agenda_event': {
+      await api.delete(`/agendaevents/${args.id}`);
+      return `✅ Événement CRM #${args.id} supprimé.`;
     }
     case 'create_agenda_event': {
       const datep = Math.floor(new Date(args.datep as string).getTime() / 1000);
@@ -277,6 +472,32 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
       const id = await api.post(`/projects/${args.project_id}/tasks`, payload);
       return `✅ Tâche créée dans le projet #${args.project_id}. ID tâche: ${id}\nLabel: ${args.label}`;
     }
+    case 'update_task': {
+      const { project_id, task_id, ...rest } = args;
+      if (rest.date_start) rest.date_start = Math.floor(new Date(rest.date_start as string).getTime() / 1000);
+      if (rest.date_end) rest.date_end = Math.floor(new Date(rest.date_end as string).getTime() / 1000);
+      await api.put(`/projects/${project_id}/tasks/${task_id}`, rest);
+      return `✅ Tâche #${task_id} du projet #${project_id} mise à jour.`;
+    }
+    case 'add_task_timespent': {
+      const payload = {
+        date: Math.floor(new Date(args.date as string).getTime() / 1000),
+        duration: args.duration,
+        note: args.note || '',
+        fk_user: args.fk_user,
+      };
+      const id = await api.post(`/projects/${args.project_id}/tasks/${args.task_id}/timespent`, payload);
+      const hours = Math.floor(Number(args.duration) / 3600);
+      const mins = Math.floor((Number(args.duration) % 3600) / 60);
+      return `✅ Temps enregistré: ${hours}h${mins > 0 ? `${mins}m` : ''} sur la tâche #${args.task_id}. ID: ${id}`;
+    }
+    case 'list_task_timespents': {
+      const endpoint = args.task_id
+        ? `/projects/${args.project_id}/tasks/${args.task_id}/timespent`
+        : `/projects/${args.project_id}/tasks/timespent`;
+      const data = await api.get(endpoint, { limit: args.limit || 100 });
+      return JSON.stringify(data, null, 2);
+    }
     default:
       throw new Error(`Outil Projet inconnu: ${name}`);
   }
@@ -298,6 +519,18 @@ export async function handleHrTool(name: string, args: Record<string, unknown>, 
       const data = await api.get('/expensereports', params);
       return JSON.stringify(data, null, 2);
     }
+    case 'get_expense': {
+      const data = await api.get(`/expensereports/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'validate_expense': {
+      await api.post(`/expensereports/${args.id}/validate`, {});
+      return `✅ Note de frais #${args.id} soumise pour validation.`;
+    }
+    case 'approve_expense': {
+      await api.post(`/expensereports/${args.id}/approve`, {});
+      return `✅ Note de frais #${args.id} approuvée.`;
+    }
     default:
       throw new Error(`Outil RH inconnu: ${name}`);
   }
@@ -311,6 +544,40 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       if (args.status !== undefined) params.status = args.status;
       const data = await api.get('/contracts', params);
       return JSON.stringify(data, null, 2);
+    }
+    case 'get_contract': {
+      const data = await api.get(`/contracts/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'validate_contract': {
+      await api.post(`/contracts/${args.id}/validate`, {});
+      return `✅ Contrat #${args.id} validé.`;
+    }
+    case 'close_contract': {
+      await api.post(`/contracts/${args.id}/close`, { note_private: args.note_private || '' });
+      return `✅ Contrat #${args.id} clôturé.`;
+    }
+    case 'add_contract_line': {
+      const { id, ...line } = args;
+      if (line.date_start) line.date_start = Math.floor(new Date(line.date_start as string).getTime() / 1000);
+      if (line.date_end) line.date_end = Math.floor(new Date(line.date_end as string).getTime() / 1000);
+      const lineId = await api.post(`/contracts/${id}/lines`, line);
+      return `✅ Ligne ajoutée au contrat #${id}. ID ligne: ${lineId}`;
+    }
+    case 'activate_contract_line': {
+      const payload: Record<string, unknown> = {};
+      if (args.date_start) payload.date_start = Math.floor(new Date(args.date_start as string).getTime() / 1000);
+      if (args.date_end) payload.date_end = Math.floor(new Date(args.date_end as string).getTime() / 1000);
+      if (args.comment) payload.comment = args.comment;
+      await api.post(`/contracts/${args.id}/lines/${args.lineid}/activate`, payload);
+      return `✅ Ligne #${args.lineid} du contrat #${args.id} activée.`;
+    }
+    case 'close_contract_line': {
+      const payload: Record<string, unknown> = {};
+      if (args.date_end) payload.date_end = Math.floor(new Date(args.date_end as string).getTime() / 1000);
+      if (args.comment) payload.comment = args.comment;
+      await api.post(`/contracts/${args.id}/lines/${args.lineid}/close`, payload);
+      return `✅ Ligne #${args.lineid} du contrat #${args.id} clôturée.`;
     }
     case 'create_contract': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
