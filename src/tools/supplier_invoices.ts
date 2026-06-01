@@ -132,6 +132,61 @@ export const supplierInvoiceTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'update_supplier_invoice',
+    description: 'Modifier une facture fournisseur (date, référence, notes) — brouillon seulement',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la facture fournisseur' },
+        ref_supplier: { type: 'string', description: 'Référence fournisseur' },
+        date: { type: 'string', description: 'Date de facture ISO 8601' },
+        date_echeance: { type: 'string', description: 'Date échéance ISO 8601' },
+        note_public: { type: 'string', description: 'Note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+        cond_reglement_id: { type: 'number', description: 'ID condition de paiement' },
+        mode_reglement_id: { type: 'number', description: 'ID mode de paiement' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'cancel_supplier_invoice',
+    description: 'Annuler/mettre en litige une facture fournisseur validée',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la facture fournisseur' },
+        comment: { type: 'string', description: 'Motif d\'annulation' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_supplier_invoice',
+    description: 'Supprimer une facture fournisseur brouillon',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la facture fournisseur à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'send_supplier_invoice_email',
+    description: 'Envoyer une facture fournisseur par email',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la facture fournisseur' },
+        to: { type: 'string', description: 'Email destinataire' },
+        subject: { type: 'string', description: 'Objet' },
+        message: { type: 'string', description: 'Corps du message' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleSupplierInvoiceTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -203,6 +258,30 @@ export async function handleSupplierInvoiceTool(name: string, args: Record<strin
       };
       const newId = await api.post('/supplierinvoices', payload);
       return `✅ Avoir fournisseur créé. ID: ${newId} (lié à la facture #${args.id})`;
+    }
+
+    case 'update_supplier_invoice': {
+      const { id, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      if (rest.date_echeance) rest.date_echeance = Math.floor(new Date(rest.date_echeance as string).getTime() / 1000);
+      await api.put(`/supplierinvoices/${id}`, rest);
+      return `✅ Facture fournisseur #${id} mise à jour.`;
+    }
+
+    case 'cancel_supplier_invoice': {
+      await api.post(`/supplierinvoices/${args.id}/cancel`, { comment: args.comment || '' });
+      return `✅ Facture fournisseur #${args.id} annulée.${args.comment ? ` Motif: ${args.comment}` : ''}`;
+    }
+
+    case 'delete_supplier_invoice': {
+      await api.delete(`/supplierinvoices/${args.id}`);
+      return `✅ Facture fournisseur #${args.id} supprimée.`;
+    }
+
+    case 'send_supplier_invoice_email': {
+      const payload = { sendto: args.to || '', subject: args.subject || '', message: args.message || '' };
+      await api.post(`/supplierinvoices/${args.id}/sendbyemail`, payload);
+      return `✅ Facture fournisseur #${args.id} envoyée par email${args.to ? ` à ${args.to}` : ''}.`;
     }
 
     default:

@@ -145,6 +145,75 @@ export const productTools: Tool[] = [
       required: ['product_id', 'warehouse_id', 'qty'],
     },
   },
+  {
+    name: 'update_product_accounting',
+    description: 'Définir les codes comptables d\'un produit (compte de vente, achat, TVA collectée/déductible)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit' },
+        accountancy_code_sell: { type: 'string', description: 'Code comptable vente (ex: 706000)' },
+        accountancy_code_buy: { type: 'string', description: "Code comptable achat (ex: 601000)" },
+        accountancy_code_sell_intra: { type: 'string', description: 'Code comptable vente intra-CE' },
+        accountancy_code_sell_export: { type: 'string', description: 'Code comptable vente export' },
+        accountancy_code_buy_intra: { type: 'string', description: 'Code comptable achat intra-CE' },
+        accountancy_code_buy_import: { type: 'string', description: 'Code comptable achat import' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_product_suppliers',
+    description: 'Lister les fournisseurs et leurs tarifs d\'achat pour un produit',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'add_product_supplier',
+    description: 'Ajouter/modifier un tarif fournisseur pour un produit',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit' },
+        socid: { type: 'number', description: 'ID du fournisseur' },
+        ref_fourn: { type: 'string', description: 'Référence fournisseur du produit' },
+        price: { type: 'number', description: 'Prix d\'achat HT' },
+        qty: { type: 'number', description: 'Quantité minimale de commande' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        delivery_time_days: { type: 'number', description: 'Délai de livraison en jours' },
+      },
+      required: ['id', 'socid', 'price'],
+    },
+  },
+  {
+    name: 'delete_product_supplier',
+    description: 'Supprimer un tarif fournisseur d\'un produit',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit' },
+        socid: { type: 'number', description: 'ID du fournisseur à supprimer' },
+        ref_fourn: { type: 'string', description: 'Référence fournisseur' },
+      },
+      required: ['id', 'socid'],
+    },
+  },
+  {
+    name: 'list_product_variants',
+    description: 'Lister les variantes d\'un produit (couleurs, tailles, options)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit parent' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleProductTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -212,6 +281,32 @@ export async function handleProductTool(name: string, args: Record<string, unkno
       const { id, ...payload } = args;
       await api.post(`/products/${id}/setpricerevel`, payload);
       return `✅ Niveau de prix ${args.pricerevel} du produit #${id} mis à jour : ${args.price} HT`;
+    }
+    case 'update_product_accounting': {
+      const { id, ...rest } = args;
+      await api.put(`/products/${id}`, rest);
+      return `✅ Codes comptables du produit #${id} mis à jour.`;
+    }
+    case 'list_product_suppliers': {
+      const data = await api.get(`/products/${args.id}/purchase_prices`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'add_product_supplier': {
+      const { id, ...payload } = args;
+      await api.post(`/products/${id}/purchase_prices`, { qty: 1, tva_tx: 0, ...payload });
+      return `✅ Tarif fournisseur #${args.socid} ajouté au produit #${id}. Prix: ${args.price}`;
+    }
+    case 'delete_product_supplier': {
+      const ref = args.ref_fourn ? encodeURIComponent(args.ref_fourn as string) : '';
+      const endpoint = ref
+        ? `/products/${args.id}/purchase_prices/${args.socid}/${ref}`
+        : `/products/${args.id}/purchase_prices/${args.socid}`;
+      await api.delete(endpoint);
+      return `✅ Tarif fournisseur #${args.socid} supprimé du produit #${args.id}.`;
+    }
+    case 'list_product_variants': {
+      const data = await api.get(`/products/${args.id}/variants`);
+      return JSON.stringify(data, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

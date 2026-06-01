@@ -82,6 +82,50 @@ export const orderTools: Tool[] = [
   },
 ];
 
+export const orderExtendedTools: Tool[] = [
+  {
+    name: 'update_order',
+    description: 'Modifier une commande client (dates, conditions, notes) — brouillon seulement',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande' },
+        date_livraison: { type: 'string', description: 'Nouvelle date de livraison ISO 8601' },
+        note_public: { type: 'string', description: 'Note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+        cond_reglement_id: { type: 'number', description: 'ID condition de paiement' },
+        ref_client: { type: 'string', description: 'Référence client' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'send_order_email',
+    description: 'Envoyer une confirmation de commande par email au client',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande' },
+        to: { type: 'string', description: 'Email destinataire' },
+        subject: { type: 'string', description: 'Objet' },
+        message: { type: 'string', description: 'Corps du message' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_order_shipments',
+    description: 'Lister les expéditions/bons de livraison liés à une commande client',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande' },
+      },
+      required: ['id'],
+    },
+  },
+];
+
 export const supplierOrderTools: Tool[] = [
   {
     name: 'list_supplier_orders',
@@ -200,6 +244,73 @@ export const supplierOrderTools: Tool[] = [
       required: ['id', 'warehouse_id'],
     },
   },
+  {
+    name: 'update_supplier_order',
+    description: 'Modifier une commande fournisseur (notes, date, référence)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur' },
+        note_public: { type: 'string', description: 'Note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+        ref_supplier: { type: 'string', description: 'Référence fournisseur' },
+        date_livraison: { type: 'string', description: 'Date de livraison prévue ISO 8601' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'cancel_supplier_order',
+    description: 'Annuler une commande fournisseur',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur' },
+        comment: { type: 'string', description: 'Motif d\'annulation' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_supplier_order',
+    description: 'Supprimer une commande fournisseur (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_supplier_order_line',
+    description: 'Modifier une ligne d\'une commande fournisseur',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        subprice: { type: 'number', description: 'Prix unitaire HT' },
+        qty: { type: 'number', description: 'Quantité' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        desc: { type: 'string', description: 'Description' },
+        remise_percent: { type: 'number', description: 'Remise %' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'delete_supplier_order_line',
+    description: 'Supprimer une ligne d\'une commande fournisseur',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande fournisseur' },
+        lineid: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
 ];
 
 export async function handleOrderTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -275,6 +386,44 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     case 'receive_supplier_order': {
       await api.post(`/supplierorders/${args.id}/receive`, { warehouse_id: args.warehouse_id });
       return `✅ Réception de la commande fournisseur #${args.id} enregistrée dans l'entrepôt #${args.warehouse_id}.`;
+    }
+    case 'update_order': {
+      const { id, ...rest } = args;
+      if (rest.date_livraison) rest.date_livraison = Math.floor(new Date(rest.date_livraison as string).getTime() / 1000);
+      await api.put(`/orders/${id}`, rest);
+      return `✅ Commande #${id} mise à jour.`;
+    }
+    case 'send_order_email': {
+      const payload = { sendto: args.to || '', subject: args.subject || '', message: args.message || '' };
+      await api.post(`/orders/${args.id}/sendbyemail`, payload);
+      return `✅ Commande #${args.id} envoyée par email${args.to ? ` à ${args.to}` : ''}.`;
+    }
+    case 'list_order_shipments': {
+      const data = await api.get(`/orders/${args.id}/shipments`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_supplier_order': {
+      const { id, ...rest } = args;
+      if (rest.date_livraison) rest.date_livraison = Math.floor(new Date(rest.date_livraison as string).getTime() / 1000);
+      await api.put(`/supplierorders/${id}`, rest);
+      return `✅ Commande fournisseur #${id} mise à jour.`;
+    }
+    case 'cancel_supplier_order': {
+      await api.post(`/supplierorders/${args.id}/cancel`, { comment: args.comment || '' });
+      return `✅ Commande fournisseur #${args.id} annulée.${args.comment ? ` Motif: ${args.comment}` : ''}`;
+    }
+    case 'delete_supplier_order': {
+      await api.delete(`/supplierorders/${args.id}`);
+      return `✅ Commande fournisseur #${args.id} supprimée.`;
+    }
+    case 'update_supplier_order_line': {
+      const { id, lineid, ...rest } = args;
+      await api.put(`/supplierorders/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} de la commande fournisseur #${id} mise à jour.`;
+    }
+    case 'delete_supplier_order_line': {
+      await api.delete(`/supplierorders/${args.id}/lines/${args.lineid}`);
+      return `✅ Ligne #${args.lineid} supprimée de la commande fournisseur #${args.id}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

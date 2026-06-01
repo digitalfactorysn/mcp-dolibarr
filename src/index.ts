@@ -28,6 +28,11 @@ import { adminTools, handleAdminTool } from "./tools/admin.js";
 import { supplierInvoiceTools, handleSupplierInvoiceTool } from "./tools/supplier_invoices.js";
 import { configAdvancedTools, handleConfigAdvancedTool } from "./tools/config_advanced.js";
 import { stockWarehouseTools, handleStockWarehouseTool } from "./tools/stock_warehouses.js";
+import { ticketTools, handleTicketTool } from "./tools/tickets.js";
+import { memberTools, handleMemberTool } from "./tools/members.js";
+import { interventionTools, handleInterventionTool } from "./tools/interventions.js";
+import { mrpTools, recurringInvoiceTools, handleMrpTool, handleRecurringInvoiceTool } from "./tools/mrp_recurring.js";
+import { orderExtendedTools } from "./tools/orders.js";
 
 dotenv.config();
 
@@ -55,6 +60,7 @@ const ALL_TOOLS = [
   ...invoiceTools,
   ...proposalTools,
   ...orderTools,
+  ...orderExtendedTools,
   ...supplierOrderTools,
   ...productTools,
   ...accountingTools,
@@ -67,6 +73,11 @@ const ALL_TOOLS = [
   ...supplierInvoiceTools,
   ...configAdvancedTools,
   ...stockWarehouseTools,
+  ...ticketTools,
+  ...memberTools,
+  ...interventionTools,
+  ...mrpTools,
+  ...recurringInvoiceTools,
 ];
 
 // Build a lookup map: tool name -> category handler
@@ -78,7 +89,7 @@ const TOOL_NAME_SET = new Set(ALL_TOOLS.map((t) => t.name));
 const server = new Server(
   {
     name: "mcp-dolibarr",
-    version: "3.0.0",
+    version: "4.0.0",
   },
   {
     capabilities: {
@@ -135,6 +146,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await handleConfigAdvancedTool(name, safeArgs, api);
     } else if (stockWarehouseTools.some((t) => t.name === name)) {
       result = await handleStockWarehouseTool(name, safeArgs, api);
+    } else if (ticketTools.some((t) => t.name === name)) {
+      result = await handleTicketTool(name, safeArgs, api);
+    } else if (memberTools.some((t) => t.name === name)) {
+      result = await handleMemberTool(name, safeArgs, api);
+    } else if (interventionTools.some((t) => t.name === name)) {
+      result = await handleInterventionTool(name, safeArgs, api);
+    } else if (mrpTools.some((t) => t.name === name)) {
+      result = await handleMrpTool(name, safeArgs, api);
+    } else if (recurringInvoiceTools.some((t) => t.name === name)) {
+      result = await handleRecurringInvoiceTool(name, safeArgs, api);
+    } else if (orderExtendedTools.some((t) => t.name === name)) {
+      result = await handleOrderTool(name, safeArgs, api);
     } else {
       throw new McpError(ErrorCode.MethodNotFound, `Outil non assigné à un module: "${name}"`);
     }

@@ -229,6 +229,46 @@ export const projectTools: Tool[] = [
       required: ['project_id'],
     },
   },
+  {
+    name: 'update_project',
+    description: 'Modifier un projet (titre, dates, budget, statut)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du projet' },
+        title: { type: 'string', description: 'Nouveau titre' },
+        description: { type: 'string', description: 'Nouvelle description' },
+        date_start: { type: 'string', description: 'Date de début ISO 8601' },
+        date_end: { type: 'string', description: 'Date de fin ISO 8601' },
+        budget_amount: { type: 'number', description: 'Budget' },
+        status: { type: 'number', description: '0=Brouillon, 1=Ouvert, 2=Fermé' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_project',
+    description: 'Supprimer un projet (impossible s\'il a des documents liés)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du projet à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_task',
+    description: 'Supprimer une tâche d\'un projet',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche à supprimer' },
+      },
+      required: ['project_id', 'task_id'],
+    },
+  },
 ];
 
 export const hrTools: Tool[] = [
@@ -269,6 +309,76 @@ export const hrTools: Tool[] = [
     name: 'approve_expense',
     description: 'Approuver une note de frais (nécessite les droits RH)',
     inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la note de frais' } }, required: ['id'] },
+  },
+  {
+    name: 'create_expense',
+    description: 'Créer une note de frais',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fk_user_author: { type: 'number', description: 'ID de l\'utilisateur qui soumet la note de frais' },
+        date_debut: { type: 'string', description: 'Date de début ISO 8601' },
+        date_fin: { type: 'string', description: 'Date de fin ISO 8601' },
+        note_public: { type: 'string', description: 'Objet/titre de la note de frais' },
+        fk_project: { type: 'number', description: 'ID du projet lié (optionnel)' },
+      },
+      required: ['fk_user_author'],
+    },
+  },
+  {
+    name: 'add_expense_line',
+    description: 'Ajouter une ligne de dépense à une note de frais',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais' },
+        date: { type: 'string', description: 'Date de la dépense ISO 8601' },
+        fk_c_type_fees: { type: 'number', description: 'Type de frais (ID du dictionnaire, ex: 1=Repas, 2=Transport)' },
+        comments: { type: 'string', description: 'Description/commentaire' },
+        qty: { type: 'number', description: 'Quantité' },
+        value_unit: { type: 'number', description: 'Montant unitaire HT' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        fk_project: { type: 'number', description: 'ID projet lié' },
+      },
+      required: ['id', 'date', 'value_unit'],
+    },
+  },
+  {
+    name: 'reject_expense',
+    description: 'Refuser une note de frais',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais' },
+        comment: { type: 'string', description: 'Motif du refus' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'pay_expense',
+    description: 'Marquer une note de frais comme payée',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais' },
+        datepaid: { type: 'string', description: 'Date de paiement ISO 8601' },
+        fk_account: { type: 'number', description: 'ID compte bancaire' },
+        fk_typepayment: { type: 'number', description: 'ID mode de paiement' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_expense',
+    description: 'Supprimer une note de frais (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais à supprimer' },
+      },
+      required: ['id'],
+    },
   },
 ];
 
@@ -367,6 +477,63 @@ export const contractTools: Tool[] = [
         note_public: { type: 'string', description: 'Description / objet du contrat' },
       },
       required: ['socid'],
+    },
+  },
+  {
+    name: 'update_contract',
+    description: 'Modifier un contrat (dates, objet, notes)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        date: { type: 'string', description: 'Date du contrat ISO 8601' },
+        date_start: { type: 'string', description: 'Date de début ISO 8601' },
+        date_end: { type: 'string', description: 'Date de fin ISO 8601' },
+        note_public: { type: 'string', description: 'Objet/note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_contract',
+    description: 'Supprimer un contrat (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_contract_line',
+    description: 'Modifier une ligne de service d\'un contrat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        subprice: { type: 'number', description: 'Prix unitaire HT' },
+        qty: { type: 'number', description: 'Quantité' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        desc: { type: 'string', description: 'Description' },
+        date_start: { type: 'string', description: 'Date début service ISO 8601' },
+        date_end: { type: 'string', description: 'Date fin service ISO 8601' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'delete_contract_line',
+    description: 'Supprimer une ligne de service d\'un contrat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du contrat' },
+        lineid: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['id', 'lineid'],
     },
   },
 ];
@@ -498,6 +665,21 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
       const data = await api.get(endpoint, { limit: args.limit || 100 });
       return JSON.stringify(data, null, 2);
     }
+    case 'update_project': {
+      const { id, ...rest } = args;
+      if (rest.date_start) rest.date_start = Math.floor(new Date(rest.date_start as string).getTime() / 1000);
+      if (rest.date_end) rest.date_end = Math.floor(new Date(rest.date_end as string).getTime() / 1000);
+      await api.put(`/projects/${id}`, rest);
+      return `✅ Projet #${id} mis à jour.`;
+    }
+    case 'delete_project': {
+      await api.delete(`/projects/${args.id}`);
+      return `✅ Projet #${args.id} supprimé.`;
+    }
+    case 'delete_task': {
+      await api.delete(`/projects/${args.project_id}/tasks/${args.task_id}`);
+      return `✅ Tâche #${args.task_id} supprimée du projet #${args.project_id}.`;
+    }
     default:
       throw new Error(`Outil Projet inconnu: ${name}`);
   }
@@ -530,6 +712,39 @@ export async function handleHrTool(name: string, args: Record<string, unknown>, 
     case 'approve_expense': {
       await api.post(`/expensereports/${args.id}/approve`, {});
       return `✅ Note de frais #${args.id} approuvée.`;
+    }
+    case 'create_expense': {
+      const payload: Record<string, unknown> = { ...args };
+      if (args.date_debut) payload.date_debut = Math.floor(new Date(args.date_debut as string).getTime() / 1000);
+      if (args.date_fin) payload.date_fin = Math.floor(new Date(args.date_fin as string).getTime() / 1000);
+      const id = await api.post('/expensereports', payload);
+      return `✅ Note de frais créée. ID: ${id}`;
+    }
+    case 'add_expense_line': {
+      const { id, ...line } = args;
+      const payload: Record<string, unknown> = { ...line };
+      if (payload.date) payload.date = Math.floor(new Date(payload.date as string).getTime() / 1000);
+      if (!payload.qty) payload.qty = 1;
+      if (!payload.tva_tx) payload.tva_tx = 0;
+      const lineId = await api.post(`/expensereports/${id}/lines`, payload);
+      return `✅ Ligne de frais ajoutée à la note #${id}. ID ligne: ${lineId}`;
+    }
+    case 'reject_expense': {
+      await api.post(`/expensereports/${args.id}/refuse`, { comment: args.comment || '' });
+      return `✅ Note de frais #${args.id} refusée.${args.comment ? ` Motif: ${args.comment}` : ''}`;
+    }
+    case 'pay_expense': {
+      const payload: Record<string, unknown> = {
+        fk_account: args.fk_account,
+        fk_typepayment: args.fk_typepayment,
+      };
+      if (args.datepaid) payload.datepaid = Math.floor(new Date(args.datepaid as string).getTime() / 1000);
+      await api.post(`/expensereports/${args.id}/pay`, payload);
+      return `✅ Note de frais #${args.id} marquée comme payée.`;
+    }
+    case 'delete_expense': {
+      await api.delete(`/expensereports/${args.id}`);
+      return `✅ Note de frais #${args.id} supprimée.`;
     }
     default:
       throw new Error(`Outil RH inconnu: ${name}`);
@@ -586,6 +801,29 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       const payload = { ...args, date, date_start, date_end };
       const id = await api.post('/contracts', payload);
       return `✅ Contrat créé pour le tiers #${args.socid}. ID contrat: ${id}`;
+    }
+    case 'update_contract': {
+      const { id, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      if (rest.date_start) rest.date_start = Math.floor(new Date(rest.date_start as string).getTime() / 1000);
+      if (rest.date_end) rest.date_end = Math.floor(new Date(rest.date_end as string).getTime() / 1000);
+      await api.put(`/contracts/${id}`, rest);
+      return `✅ Contrat #${id} mis à jour.`;
+    }
+    case 'delete_contract': {
+      await api.delete(`/contracts/${args.id}`);
+      return `✅ Contrat #${args.id} supprimé.`;
+    }
+    case 'update_contract_line': {
+      const { id, lineid, ...rest } = args;
+      if (rest.date_start) rest.date_start = Math.floor(new Date(rest.date_start as string).getTime() / 1000);
+      if (rest.date_end) rest.date_end = Math.floor(new Date(rest.date_end as string).getTime() / 1000);
+      await api.put(`/contracts/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} du contrat #${id} mise à jour.`;
+    }
+    case 'delete_contract_line': {
+      await api.delete(`/contracts/${args.id}/lines/${args.lineid}`);
+      return `✅ Ligne #${args.lineid} supprimée du contrat #${args.id}.`;
     }
     default:
       throw new Error(`Outil Contrat inconnu: ${name}`);

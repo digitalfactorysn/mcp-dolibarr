@@ -96,6 +96,65 @@ export const proposalTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'update_proposal',
+    description: 'Modifier un devis existant (dates, conditions, notes)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis' },
+        date: { type: 'string', description: 'Date du devis ISO 8601' },
+        fin_validite: { type: 'string', description: 'Date de fin de validité ISO 8601' },
+        note_public: { type: 'string', description: 'Note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+        cond_reglement_id: { type: 'number', description: 'ID condition de paiement' },
+        mode_reglement_id: { type: 'number', description: 'ID mode de paiement' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_proposal',
+    description: 'Supprimer un devis (doit être en statut brouillon)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_proposal_line',
+    description: 'Modifier une ligne d\'un devis (prix, quantité, remise)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        desc: { type: 'string', description: 'Description' },
+        subprice: { type: 'number', description: 'Prix unitaire HT' },
+        qty: { type: 'number', description: 'Quantité' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        remise_percent: { type: 'number', description: 'Remise %' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'send_proposal_email',
+    description: 'Envoyer un devis par email au client',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis' },
+        to: { type: 'string', description: 'Email destinataire (défaut: email du tiers)' },
+        subject: { type: 'string', description: 'Objet de l\'email' },
+        message: { type: 'string', description: 'Corps du message' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleProposalTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -139,6 +198,31 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       // Then create order from proposal
       const orderId = await api.post('/orders', { origin: 'propal', origin_id: args.id });
       return `✅ Devis #${args.id} converti en commande client. ID commande: ${orderId}`;
+    }
+    case 'update_proposal': {
+      const { id, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      if (rest.fin_validite) rest.fin_validite = Math.floor(new Date(rest.fin_validite as string).getTime() / 1000);
+      await api.put(`/proposals/${id}`, rest);
+      return `✅ Devis #${id} mis à jour.`;
+    }
+    case 'delete_proposal': {
+      await api.delete(`/proposals/${args.id}`);
+      return `✅ Devis #${args.id} supprimé.`;
+    }
+    case 'update_proposal_line': {
+      const { id, lineid, ...rest } = args;
+      await api.put(`/proposals/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} du devis #${id} mise à jour.`;
+    }
+    case 'send_proposal_email': {
+      const payload = {
+        sendto: args.to || '',
+        subject: args.subject || '',
+        message: args.message || '',
+      };
+      await api.post(`/proposals/${args.id}/sendbyemail`, payload);
+      return `✅ Devis #${args.id} envoyé par email${args.to ? ` à ${args.to}` : ''}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

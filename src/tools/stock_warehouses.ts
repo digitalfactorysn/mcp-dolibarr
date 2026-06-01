@@ -186,6 +186,86 @@ export const stockWarehouseTools: Tool[] = [
       required: ['product_id', 'warehouse_source_id', 'warehouse_destination_id', 'qty'],
     },
   },
+  {
+    name: 'update_shipment',
+    description: 'Modifier une expédition (date, mode de livraison, tracking)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'expédition' },
+        date_delivery: { type: 'string', description: 'Date de livraison ISO 8601' },
+        shipping_method_id: { type: 'number', description: 'ID mode de livraison' },
+        tracking_number: { type: 'string', description: 'Numéro de suivi' },
+        note_public: { type: 'string', description: 'Note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_shipment',
+    description: 'Supprimer une expédition (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'expédition à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  // ── INVENTAIRES ──
+  {
+    name: 'list_inventories',
+    description: 'Lister les inventaires de stock (prises d\'inventaire)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Nombre max (défaut: 100)' },
+        status: { type: 'number', description: '0=Brouillon, 1=Validé' },
+        warehouse_id: { type: 'number', description: 'Filtrer par entrepôt' },
+      },
+    },
+  },
+  {
+    name: 'create_inventory',
+    description: 'Créer un inventaire de stock (prise d\'inventaire)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'Libellé de l\'inventaire' },
+        date_inventory: { type: 'string', description: 'Date de l\'inventaire ISO 8601' },
+        fk_warehouse: { type: 'number', description: 'ID de l\'entrepôt' },
+        fk_product: { type: 'number', description: 'ID produit (pour inventaire partiel)' },
+      },
+      required: ['label'],
+    },
+  },
+  {
+    name: 'add_inventory_line',
+    description: 'Ajouter une ligne de comptage à un inventaire (produit + quantité comptée)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'inventaire' },
+        fk_product: { type: 'number', description: 'ID du produit' },
+        fk_warehouse: { type: 'number', description: 'ID de l\'entrepôt' },
+        qty: { type: 'number', description: 'Quantité comptée' },
+        price: { type: 'number', description: 'Prix unitaire (pour valorisation)' },
+      },
+      required: ['id', 'fk_product', 'fk_warehouse', 'qty'],
+    },
+  },
+  {
+    name: 'validate_inventory',
+    description: 'Valider un inventaire (ajuste les quantités de stock selon les comptages)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'inventaire à valider' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleStockWarehouseTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -285,6 +365,44 @@ export async function handleStockWarehouseTool(name: string, args: Record<string
       };
       await api.post('/stockmovements', payload);
       return `✅ Transfert de ${args.qty} unités du produit #${args.product_id}\nDe l'entrepôt #${args.warehouse_source_id} → #${args.warehouse_destination_id}`;
+    }
+
+    case 'update_shipment': {
+      const { id, ...rest } = args;
+      if (rest.date_delivery) rest.date_delivery = Math.floor(new Date(rest.date_delivery as string).getTime() / 1000);
+      await api.put(`/shipments/${id}`, rest);
+      return `✅ Expédition #${id} mise à jour.`;
+    }
+
+    case 'delete_shipment': {
+      await api.delete(`/shipments/${args.id}`);
+      return `✅ Expédition #${args.id} supprimée.`;
+    }
+
+    case 'list_inventories': {
+      const params: Record<string, unknown> = { limit: args.limit || 100 };
+      if (args.status !== undefined) params.status = args.status;
+      if (args.warehouse_id) params.fk_warehouse = args.warehouse_id;
+      const data = await api.get('/inventories', params);
+      return JSON.stringify(data, null, 2);
+    }
+
+    case 'create_inventory': {
+      const payload: Record<string, unknown> = { ...args };
+      if (args.date_inventory) payload.date_inventory = Math.floor(new Date(args.date_inventory as string).getTime() / 1000);
+      const id = await api.post('/inventories', payload);
+      return `✅ Inventaire '${args.label}' créé. ID: ${id}`;
+    }
+
+    case 'add_inventory_line': {
+      const { id, ...line } = args;
+      const lineId = await api.post(`/inventories/${id}/lines`, line);
+      return `✅ Ligne d'inventaire ajoutée. ID: ${lineId} | Produit #${args.fk_product} | Qté: ${args.qty}`;
+    }
+
+    case 'validate_inventory': {
+      await api.post(`/inventories/${args.id}/validate`, {});
+      return `✅ Inventaire #${args.id} validé. Le stock a été ajusté selon les comptages.`;
     }
 
     default:

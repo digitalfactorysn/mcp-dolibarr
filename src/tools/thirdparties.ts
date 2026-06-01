@@ -192,6 +192,41 @@ export const thirdpartyTools: Tool[] = [
       required: ['id_to_keep', 'id_to_merge'],
     },
   },
+  {
+    name: 'list_thirdparty_contracts',
+    description: 'Lister tous les contrats/abonnements d\'un tiers',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_thirdparty_projects',
+    description: 'Lister tous les projets associés à un tiers',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_thirdparty_accounting',
+    description: 'Définir les codes comptables d\'un tiers (compte client/fournisseur)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+        code_compta: { type: 'string', description: 'Code comptable client (ex: 411000)' },
+        code_compta_fournisseur: { type: 'string', description: 'Code comptable fournisseur (ex: 401000)' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleThirdpartyTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -262,6 +297,23 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
     case 'merge_thirdparties': {
       await api.put(`/thirdparties/${args.id_to_keep}/merge/${args.id_to_merge}`, {});
       return `✅ Tiers fusionnés. Le tiers #${args.id_to_merge} a été absorbé par #${args.id_to_keep}.`;
+    }
+    case 'list_thirdparty_contracts': {
+      const data = await api.get(`/thirdparties/${args.id}/contracts`).catch(() =>
+        api.get('/contracts', { thirdparty_ids: args.id, limit: 100 })
+      );
+      return JSON.stringify(data, null, 2);
+    }
+    case 'list_thirdparty_projects': {
+      const data = await api.get(`/thirdparties/${args.id}/projects`).catch(() =>
+        api.get('/projects', { thirdparty_ids: args.id, limit: 100 })
+      );
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_thirdparty_accounting': {
+      const { id, ...rest } = args;
+      await api.put(`/thirdparties/${id}`, rest);
+      return `✅ Codes comptables du tiers #${id} mis à jour.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);
