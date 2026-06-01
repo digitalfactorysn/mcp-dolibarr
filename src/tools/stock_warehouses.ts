@@ -266,6 +266,28 @@ export const stockWarehouseTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'get_inventory',
+    description: 'Obtenir les détails d\'un inventaire (lignes, statut, entrepôt)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'inventaire' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_inventory',
+    description: 'Supprimer un inventaire brouillon',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'inventaire à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleStockWarehouseTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -403,6 +425,16 @@ export async function handleStockWarehouseTool(name: string, args: Record<string
     case 'validate_inventory': {
       await api.post(`/inventories/${args.id}/validate`, {});
       return `✅ Inventaire #${args.id} validé. Le stock a été ajusté selon les comptages.`;
+    }
+
+    case 'get_inventory': {
+      const data = await api.get(`/inventories/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+
+    case 'delete_inventory': {
+      await api.delete(`/inventories/${args.id}`);
+      return `✅ Inventaire #${args.id} supprimé.`;
     }
 
     default:

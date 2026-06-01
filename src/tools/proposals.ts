@@ -61,6 +61,18 @@ export const proposalTools: Tool[] = [
     },
   },
   {
+    name: 'delete_proposal_line',
+    description: 'Supprimer une ligne d\'un devis (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis' },
+        lineid: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
     name: 'validate_proposal',
     description: 'Valider un devis brouillon (le rend visible et envoyable au client)',
     inputSchema: {
@@ -209,6 +221,10 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
     case 'delete_proposal': {
       await api.delete(`/proposals/${args.id}`);
       return `✅ Devis #${args.id} supprimé.`;
+    }
+    case 'delete_proposal_line': {
+      await api.delete(`/proposals/${args.id}/lines/${args.lineid}`);
+      return `✅ Ligne #${args.lineid} supprimée du devis #${args.id}.`;
     }
     case 'update_proposal_line': {
       const { id, lineid, ...rest } = args;

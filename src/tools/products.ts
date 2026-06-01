@@ -146,20 +146,47 @@ export const productTools: Tool[] = [
     },
   },
   {
-    name: 'update_product_accounting',
-    description: 'Définir les codes comptables d\'un produit (compte de vente, achat, TVA collectée/déductible)',
+    name: 'update_product_supplier',
+    description: 'Modifier un tarif fournisseur existant pour un produit',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du produit' },
-        accountancy_code_sell: { type: 'string', description: 'Code comptable vente (ex: 706000)' },
-        accountancy_code_buy: { type: 'string', description: "Code comptable achat (ex: 601000)" },
-        accountancy_code_sell_intra: { type: 'string', description: 'Code comptable vente intra-CE' },
-        accountancy_code_sell_export: { type: 'string', description: 'Code comptable vente export' },
-        accountancy_code_buy_intra: { type: 'string', description: 'Code comptable achat intra-CE' },
-        accountancy_code_buy_import: { type: 'string', description: 'Code comptable achat import' },
+        socid: { type: 'number', description: 'ID du fournisseur' },
+        ref_fourn: { type: 'string', description: 'Référence fournisseur du produit' },
+        price: { type: 'number', description: 'Nouveau prix d\'achat HT' },
+        qty: { type: 'number', description: 'Quantité minimale de commande' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+        delivery_time_days: { type: 'number', description: 'Délai de livraison en jours' },
+      },
+      required: ['id', 'socid', 'price'],
+    },
+  },
+  {
+    name: 'create_product_variant',
+    description: 'Créer une variante d\'un produit (ex: couleur rouge, taille L)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit parent' },
+        weight_impact: { type: 'number', description: 'Impact sur le poids (0 par défaut)' },
+        price_impact: { type: 'number', description: 'Impact sur le prix (0 par défaut)' },
+        price_impact_is_percent: { type: 'number', description: '1=% du prix, 0=montant fixe' },
+        features: { type: 'object', description: 'Attributs: {"attribut_id": "valeur_id"} ex: {"1": "2"}' },
       },
       required: ['id'],
+    },
+  },
+  {
+    name: 'delete_product_variant',
+    description: 'Supprimer une variante de produit',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du produit parent' },
+        variant_id: { type: 'number', description: 'ID de la variante à supprimer' },
+      },
+      required: ['id', 'variant_id'],
     },
   },
   {
@@ -282,10 +309,19 @@ export async function handleProductTool(name: string, args: Record<string, unkno
       await api.post(`/products/${id}/setpricerevel`, payload);
       return `✅ Niveau de prix ${args.pricerevel} du produit #${id} mis à jour : ${args.price} HT`;
     }
-    case 'update_product_accounting': {
-      const { id, ...rest } = args;
-      await api.put(`/products/${id}`, rest);
-      return `✅ Codes comptables du produit #${id} mis à jour.`;
+    case 'update_product_supplier': {
+      const { id, ...payload } = args;
+      await api.put(`/products/${id}/purchase_prices`, { qty: 1, tva_tx: 0, ...payload });
+      return `✅ Tarif fournisseur #${args.socid} mis à jour pour le produit #${id}.`;
+    }
+    case 'create_product_variant': {
+      const { id, ...payload } = args;
+      const varId = await api.post(`/products/${id}/variants`, { weight_impact: 0, price_impact: 0, price_impact_is_percent: 0, ...payload });
+      return `✅ Variante créée pour le produit #${id}. ID variante: ${varId}`;
+    }
+    case 'delete_product_variant': {
+      await api.delete(`/products/${args.id}/variants/${args.variant_id}`);
+      return `✅ Variante #${args.variant_id} supprimée du produit #${args.id}.`;
     }
     case 'list_product_suppliers': {
       const data = await api.get(`/products/${args.id}/purchase_prices`);

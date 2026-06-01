@@ -215,16 +215,33 @@ export const thirdpartyTools: Tool[] = [
     },
   },
   {
-    name: 'update_thirdparty_accounting',
-    description: 'Définir les codes comptables d\'un tiers (compte client/fournisseur)',
+    name: 'update_thirdparty_bank_account',
+    description: 'Modifier un RIB/IBAN d\'un tiers',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du tiers' },
-        code_compta: { type: 'string', description: 'Code comptable client (ex: 411000)' },
-        code_compta_fournisseur: { type: 'string', description: 'Code comptable fournisseur (ex: 401000)' },
+        bankaccount_id: { type: 'number', description: 'ID du compte bancaire à modifier' },
+        label: { type: 'string', description: 'Libellé du compte' },
+        bank: { type: 'string', description: 'Nom de la banque' },
+        iban: { type: 'string', description: 'IBAN' },
+        bic: { type: 'string', description: 'BIC/SWIFT' },
+        rum: { type: 'string', description: 'Référence mandat (prélèvement)' },
+        branch: { type: 'string', description: 'Agence bancaire' },
       },
-      required: ['id'],
+      required: ['id', 'bankaccount_id'],
+    },
+  },
+  {
+    name: 'delete_thirdparty_bank_account',
+    description: 'Supprimer un RIB/IBAN d\'un tiers',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du tiers' },
+        bankaccount_id: { type: 'number', description: 'ID du compte bancaire à supprimer' },
+      },
+      required: ['id', 'bankaccount_id'],
     },
   },
 ];
@@ -310,10 +327,14 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       );
       return JSON.stringify(data, null, 2);
     }
-    case 'update_thirdparty_accounting': {
-      const { id, ...rest } = args;
-      await api.put(`/thirdparties/${id}`, rest);
-      return `✅ Codes comptables du tiers #${id} mis à jour.`;
+    case 'update_thirdparty_bank_account': {
+      const { id, bankaccount_id, ...payload } = args;
+      await api.put(`/thirdparties/${id}/bankaccounts/${bankaccount_id}`, payload);
+      return `✅ Compte bancaire #${bankaccount_id} du tiers #${id} mis à jour.`;
+    }
+    case 'delete_thirdparty_bank_account': {
+      await api.delete(`/thirdparties/${args.id}/bankaccounts/${args.bankaccount_id}`);
+      return `✅ Compte bancaire #${args.bankaccount_id} supprimé du tiers #${args.id}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

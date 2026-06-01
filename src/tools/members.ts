@@ -114,6 +114,44 @@ export const memberTools: Tool[] = [
       required: ['label'],
     },
   },
+  {
+    name: 'list_member_subscriptions',
+    description: 'Lister les cotisations d\'un adhérent (historique des paiements d\'adhésion)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'adhérent' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_member_type',
+    description: 'Modifier un type d\'adhésion (libellé, montant, durée)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du type d\'adhésion' },
+        label: { type: 'string', description: 'Libellé' },
+        amount: { type: 'number', description: 'Montant de cotisation par défaut' },
+        duration: { type: 'string', description: "'y'=1 an, 'm'=1 mois" },
+        subscription: { type: 'number', description: '1=Cotisation requise, 0=Non' },
+        note: { type: 'string', description: 'Description' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_member_type',
+    description: 'Supprimer un type d\'adhésion',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du type d\'adhésion à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleMemberTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -172,6 +210,19 @@ export async function handleMemberTool(name: string, args: Record<string, unknow
       };
       const id = await api.post('/members/types', payload);
       return `✅ Type d'adhésion '${args.label}' créé. ID: ${id}`;
+    }
+    case 'list_member_subscriptions': {
+      const data = await api.get(`/members/${args.id}/subscriptions`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'update_member_type': {
+      const { id, ...rest } = args;
+      await api.put(`/members/types/${id}`, rest);
+      return `✅ Type d'adhésion #${id} mis à jour.`;
+    }
+    case 'delete_member_type': {
+      await api.delete(`/members/types/${args.id}`);
+      return `✅ Type d'adhésion #${args.id} supprimé.`;
     }
     default:
       throw new Error(`Outil membre inconnu: ${name}`);

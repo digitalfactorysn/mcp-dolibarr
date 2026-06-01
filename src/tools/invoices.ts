@@ -158,17 +158,22 @@ export const invoiceTools: Tool[] = [
     },
   },
   {
-    name: 'send_proposal_email',
-    description: 'Envoyer un devis/proposition commerciale par email au client',
+    name: 'update_invoice',
+    description: 'Modifier l\'entête d\'une facture brouillon (tiers, date, conditions, notes)',
     inputSchema: {
       type: 'object',
       properties: {
-        id: { type: 'number', description: 'ID du devis' },
-        sendto: { type: 'string', description: 'Email destinataire' },
-        subject: { type: 'string', description: "Sujet de l'email" },
-        message: { type: 'string', description: "Corps du message" },
+        id: { type: 'number', description: 'ID de la facture' },
+        date: { type: 'string', description: 'Date de facturation ISO 8601' },
+        note_public: { type: 'string', description: 'Note publique (visible sur PDF)' },
+        note_private: { type: 'string', description: 'Note interne' },
+        ref_client: { type: 'string', description: 'Référence client' },
+        cond_reglement_id: { type: 'number', description: 'ID condition de paiement' },
+        mode_reglement_id: { type: 'number', description: 'ID mode de paiement' },
+        fk_account: { type: 'number', description: 'ID compte bancaire par défaut' },
+        date_lim_reglement: { type: 'string', description: 'Date limite de règlement ISO 8601' },
       },
-      required: ['id', 'sendto'],
+      required: ['id'],
     },
   },
   {
@@ -260,6 +265,13 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
     case 'list_invoice_payments': {
       const data = await api.get(`/invoices/${args.id}/payments`);
       return JSON.stringify(data, null, 2);
+    }
+    case 'update_invoice': {
+      const { id, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      if (rest.date_lim_reglement) rest.date_lim_reglement = Math.floor(new Date(rest.date_lim_reglement as string).getTime() / 1000);
+      await api.put(`/invoices/${id}`, rest);
+      return `✅ Facture #${id} mise à jour.`;
     }
     case 'send_proposal_email': {
       const payload = {

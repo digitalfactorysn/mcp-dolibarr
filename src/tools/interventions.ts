@@ -94,6 +94,64 @@ export const interventionTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'update_intervention',
+    description: 'Modifier une fiche d\'intervention (objet, client, notes)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'intervention' },
+        socid: { type: 'number', description: 'ID du client' },
+        date: { type: 'string', description: 'Date ISO 8601' },
+        description: { type: 'string', description: 'Objet / description' },
+        note_public: { type: 'string', description: 'Note publique' },
+        note_private: { type: 'string', description: 'Note interne' },
+        contact_id: { type: 'number', description: 'ID du contact' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_intervention',
+    description: 'Supprimer une fiche d\'intervention (brouillon seulement)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'intervention à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_intervention_line',
+    description: 'Modifier une ligne de temps/prestation d\'une intervention',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'intervention' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        date: { type: 'string', description: 'Date ISO 8601' },
+        desc: { type: 'string', description: 'Description' },
+        duration: { type: 'number', description: 'Durée en secondes' },
+        unitprice: { type: 'number', description: 'Prix unitaire HT' },
+        qty: { type: 'number', description: 'Quantité' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'delete_intervention_line',
+    description: 'Supprimer une ligne de temps/prestation d\'une intervention',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'intervention' },
+        lineid: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
 ];
 
 export async function handleInterventionTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -137,6 +195,26 @@ export async function handleInterventionTool(name: string, args: Record<string, 
     case 'bill_intervention': {
       const invoiceId = await api.post(`/interventions/${args.id}/invoice`, {});
       return `✅ Intervention #${args.id} facturée. ID facture générée: ${invoiceId}`;
+    }
+    case 'update_intervention': {
+      const { id, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      await api.put(`/interventions/${id}`, rest);
+      return `✅ Intervention #${id} mise à jour.`;
+    }
+    case 'delete_intervention': {
+      await api.delete(`/interventions/${args.id}`);
+      return `✅ Intervention #${args.id} supprimée.`;
+    }
+    case 'update_intervention_line': {
+      const { id, lineid, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      await api.put(`/interventions/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} de l'intervention #${id} mise à jour.`;
+    }
+    case 'delete_intervention_line': {
+      await api.delete(`/interventions/${args.id}/lines/${args.lineid}`);
+      return `✅ Ligne #${args.lineid} supprimée de l'intervention #${args.id}.`;
     }
     default:
       throw new Error(`Outil intervention inconnu: ${name}`);

@@ -190,6 +190,28 @@ export const adminTools: Tool[] = [
       required: ['product_id'],
     },
   },
+  {
+    name: 'delete_user',
+    description: 'Supprimer définitivement un utilisateur Dolibarr (irréversible — préférer disable_user)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        user_id: { type: 'number', description: 'ID de l\'utilisateur à supprimer' },
+      },
+      required: ['user_id'],
+    },
+  },
+  {
+    name: 'delete_group',
+    description: 'Supprimer un groupe d\'utilisateurs',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        group_id: { type: 'number', description: 'ID du groupe à supprimer' },
+      },
+      required: ['group_id'],
+    },
+  },
 ];
 
 export async function handleAdminTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -304,6 +326,16 @@ export async function handleAdminTool(name: string, args: Record<string, unknown
       for (const f of fields) if (args[f] !== undefined) payload[f] = args[f];
       await api.put(`/products/${args.product_id}`, payload);
       return `✅ Codes comptables du produit #${args.product_id} mis à jour.\n${JSON.stringify(payload, null, 2)}`;
+    }
+
+    case 'delete_user': {
+      await api.delete(`/users/${args.user_id}`);
+      return `✅ Utilisateur #${args.user_id} supprimé définitivement.`;
+    }
+
+    case 'delete_group': {
+      await api.delete(`/groups/${args.group_id}`);
+      return `✅ Groupe #${args.group_id} supprimé.`;
     }
 
     default:

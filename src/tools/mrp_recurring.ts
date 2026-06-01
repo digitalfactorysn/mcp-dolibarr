@@ -71,6 +71,44 @@ export const mrpTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'update_mrp_production',
+    description: 'Modifier un ordre de fabrication (quantité, dates, entrepôt, nomenclature)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'ordre de fabrication' },
+        qty: { type: 'number', description: 'Nouvelle quantité à fabriquer' },
+        date_start_planned: { type: 'string', description: 'Date de début planifiée ISO 8601' },
+        date_end_planned: { type: 'string', description: 'Date de fin planifiée ISO 8601' },
+        fk_warehouse: { type: 'number', description: 'ID entrepôt de production' },
+        note_private: { type: 'string', description: 'Note interne' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'cancel_mrp_production',
+    description: 'Annuler un ordre de fabrication validé',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'ordre de fabrication' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_mrp_production',
+    description: 'Supprimer un ordre de fabrication brouillon',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de l\'ordre de fabrication à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
   // ── NOMENCLATURES (BOM) ──
   {
     name: 'list_bom',
@@ -128,6 +166,61 @@ export const mrpTools: Tool[] = [
         note_private: { type: 'string', description: 'Note sur le composant' },
       },
       required: ['id', 'fk_product', 'qty'],
+    },
+  },
+  {
+    name: 'update_bom',
+    description: 'Modifier une nomenclature (libellé, quantité produite, entrepôt)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la nomenclature' },
+        label: { type: 'string', description: 'Libellé' },
+        qty: { type: 'number', description: 'Quantité produite par cette nomenclature' },
+        fk_warehouse: { type: 'number', description: 'ID entrepôt de production' },
+        note_private: { type: 'string', description: 'Note interne' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_bom',
+    description: 'Supprimer une nomenclature de fabrication',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la nomenclature à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_bom_line',
+    description: 'Modifier un composant d\'une nomenclature (quantité, entrepôt, position)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la nomenclature' },
+        lineid: { type: 'number', description: 'ID de la ligne composant' },
+        qty: { type: 'number', description: 'Nouvelle quantité nécessaire' },
+        fk_warehouse: { type: 'number', description: 'ID entrepôt source' },
+        import_qty: { type: 'number', description: 'Quantité de chute/perte' },
+        position: { type: 'number', description: 'Position dans la nomenclature' },
+        note_private: { type: 'string', description: 'Note sur le composant' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'delete_bom_line',
+    description: 'Supprimer un composant d\'une nomenclature',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la nomenclature' },
+        lineid: { type: 'number', description: 'ID de la ligne composant à supprimer' },
+      },
+      required: ['id', 'lineid'],
     },
   },
 ];
@@ -260,6 +353,39 @@ export async function handleMrpTool(name: string, args: Record<string, unknown>,
       const { id, ...line } = args;
       const lineId = await api.post(`/boms/${id}/lines`, { import_qty: 0, position: 0, ...line });
       return `✅ Composant #${args.fk_product} (qté: ${args.qty}) ajouté à la nomenclature #${id}. ID ligne: ${lineId}`;
+    }
+    case 'update_mrp_production': {
+      const { id, ...rest } = args;
+      if (rest.date_start_planned) rest.date_start_planned = Math.floor(new Date(rest.date_start_planned as string).getTime() / 1000);
+      if (rest.date_end_planned) rest.date_end_planned = Math.floor(new Date(rest.date_end_planned as string).getTime() / 1000);
+      await api.put(`/mrps/${id}`, rest);
+      return `✅ Ordre de fabrication #${id} mis à jour.`;
+    }
+    case 'cancel_mrp_production': {
+      await api.post(`/mrps/${args.id}/cancel`, {});
+      return `✅ Ordre de fabrication #${args.id} annulé.`;
+    }
+    case 'delete_mrp_production': {
+      await api.delete(`/mrps/${args.id}`);
+      return `✅ Ordre de fabrication #${args.id} supprimé.`;
+    }
+    case 'update_bom': {
+      const { id, ...rest } = args;
+      await api.put(`/boms/${id}`, rest);
+      return `✅ Nomenclature #${id} mise à jour.`;
+    }
+    case 'delete_bom': {
+      await api.delete(`/boms/${args.id}`);
+      return `✅ Nomenclature #${args.id} supprimée.`;
+    }
+    case 'update_bom_line': {
+      const { id, lineid, ...rest } = args;
+      await api.put(`/boms/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} de la nomenclature #${id} mise à jour.`;
+    }
+    case 'delete_bom_line': {
+      await api.delete(`/boms/${args.id}/lines/${args.lineid}`);
+      return `✅ Composant #${args.lineid} supprimé de la nomenclature #${args.id}.`;
     }
     default:
       throw new Error(`Outil MRP inconnu: ${name}`);

@@ -100,6 +100,17 @@ export const ticketTools: Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'delete_ticket',
+    description: 'Supprimer un ticket support',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du ticket à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function handleTicketTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -160,6 +171,10 @@ export async function handleTicketTool(name: string, args: Record<string, unknow
     case 'list_ticket_messages': {
       const data = await api.get(`/tickets/${args.id}/logs`);
       return JSON.stringify(data, null, 2);
+    }
+    case 'delete_ticket': {
+      await api.delete(`/tickets/${args.id}`);
+      return `✅ Ticket #${args.id} supprimé.`;
     }
     default:
       throw new Error(`Outil ticket inconnu: ${name}`);

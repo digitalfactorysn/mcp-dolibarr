@@ -109,6 +109,11 @@ export const crmTools: Tool[] = [
     description: 'Supprimer un événement CRM',
     inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de l\'événement' } }, required: ['id'] },
   },
+  {
+    name: 'get_agenda_event',
+    description: 'Obtenir les détails complets d\'un événement CRM (type, participants, notes)',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de l\'événement' } }, required: ['id'] },
+  },
 ];
 
 export const projectTools: Tool[] = [
@@ -269,6 +274,47 @@ export const projectTools: Tool[] = [
       required: ['project_id', 'task_id'],
     },
   },
+  {
+    name: 'get_task',
+    description: 'Obtenir les détails d\'une tâche de projet (avancement, assignation, temps saisi)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche' },
+      },
+      required: ['project_id', 'task_id'],
+    },
+  },
+  {
+    name: 'update_timespent',
+    description: 'Modifier une saisie de temps sur une tâche',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche' },
+        timespent_id: { type: 'number', description: 'ID de la saisie de temps' },
+        date: { type: 'string', description: 'Date ISO 8601' },
+        duration: { type: 'number', description: 'Durée en secondes' },
+        note: { type: 'string', description: 'Commentaire' },
+      },
+      required: ['project_id', 'task_id', 'timespent_id'],
+    },
+  },
+  {
+    name: 'delete_timespent',
+    description: 'Supprimer une saisie de temps sur une tâche',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'number', description: 'ID du projet' },
+        task_id: { type: 'number', description: 'ID de la tâche' },
+        timespent_id: { type: 'number', description: 'ID de la saisie de temps à supprimer' },
+      },
+      required: ['project_id', 'task_id', 'timespent_id'],
+    },
+  },
 ];
 
 export const hrTools: Tool[] = [
@@ -378,6 +424,50 @@ export const hrTools: Tool[] = [
         id: { type: 'number', description: 'ID de la note de frais à supprimer' },
       },
       required: ['id'],
+    },
+  },
+  {
+    name: 'update_expense',
+    description: 'Modifier l\'entête d\'une note de frais (dates, objet, projet)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais' },
+        date_debut: { type: 'string', description: 'Date de début ISO 8601' },
+        date_fin: { type: 'string', description: 'Date de fin ISO 8601' },
+        note_public: { type: 'string', description: 'Objet/titre' },
+        fk_project: { type: 'number', description: 'ID du projet lié' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_expense_line',
+    description: 'Modifier une ligne de dépense dans une note de frais',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais' },
+        lineid: { type: 'number', description: 'ID de la ligne' },
+        date: { type: 'string', description: 'Date de la dépense ISO 8601' },
+        comments: { type: 'string', description: 'Description' },
+        qty: { type: 'number', description: 'Quantité' },
+        value_unit: { type: 'number', description: 'Montant unitaire HT' },
+        tva_tx: { type: 'number', description: 'Taux TVA %' },
+      },
+      required: ['id', 'lineid'],
+    },
+  },
+  {
+    name: 'delete_expense_line',
+    description: 'Supprimer une ligne de dépense d\'une note de frais',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la note de frais' },
+        lineid: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['id', 'lineid'],
     },
   },
 ];
@@ -584,6 +674,10 @@ export async function handleCrmTool(name: string, args: Record<string, unknown>,
       await api.delete(`/agendaevents/${args.id}`);
       return `✅ Événement CRM #${args.id} supprimé.`;
     }
+    case 'get_agenda_event': {
+      const data = await api.get(`/agendaevents/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
     case 'create_agenda_event': {
       const datep = Math.floor(new Date(args.datep as string).getTime() / 1000);
       const datep2 = args.datep2 ? Math.floor(new Date(args.datep2 as string).getTime() / 1000) : datep + 3600;
@@ -680,6 +774,23 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
       await api.delete(`/projects/${args.project_id}/tasks/${args.task_id}`);
       return `✅ Tâche #${args.task_id} supprimée du projet #${args.project_id}.`;
     }
+    case 'get_task': {
+      const [task, timespents] = await Promise.all([
+        api.get(`/projects/${args.project_id}/tasks/${args.task_id}`),
+        api.get(`/projects/${args.project_id}/tasks/${args.task_id}/timespent`).catch(() => []),
+      ]);
+      return JSON.stringify({ task, timespents }, null, 2);
+    }
+    case 'update_timespent': {
+      const { project_id, task_id, timespent_id, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      await api.put(`/projects/${project_id}/tasks/${task_id}/timespent/${timespent_id}`, rest);
+      return `✅ Saisie de temps #${timespent_id} mise à jour.`;
+    }
+    case 'delete_timespent': {
+      await api.delete(`/projects/${args.project_id}/tasks/${args.task_id}/timespent/${args.timespent_id}`);
+      return `✅ Saisie de temps #${args.timespent_id} supprimée de la tâche #${args.task_id}.`;
+    }
     default:
       throw new Error(`Outil Projet inconnu: ${name}`);
   }
@@ -745,6 +856,23 @@ export async function handleHrTool(name: string, args: Record<string, unknown>, 
     case 'delete_expense': {
       await api.delete(`/expensereports/${args.id}`);
       return `✅ Note de frais #${args.id} supprimée.`;
+    }
+    case 'update_expense': {
+      const { id, ...rest } = args;
+      if (rest.date_debut) rest.date_debut = Math.floor(new Date(rest.date_debut as string).getTime() / 1000);
+      if (rest.date_fin) rest.date_fin = Math.floor(new Date(rest.date_fin as string).getTime() / 1000);
+      await api.put(`/expensereports/${id}`, rest);
+      return `✅ Note de frais #${id} mise à jour.`;
+    }
+    case 'update_expense_line': {
+      const { id, lineid, ...rest } = args;
+      if (rest.date) rest.date = Math.floor(new Date(rest.date as string).getTime() / 1000);
+      await api.put(`/expensereports/${id}/lines/${lineid}`, rest);
+      return `✅ Ligne #${lineid} de la note de frais #${id} mise à jour.`;
+    }
+    case 'delete_expense_line': {
+      await api.delete(`/expensereports/${args.id}/lines/${args.lineid}`);
+      return `✅ Ligne #${args.lineid} supprimée de la note de frais #${args.id}.`;
     }
     default:
       throw new Error(`Outil RH inconnu: ${name}`);

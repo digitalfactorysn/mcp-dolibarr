@@ -84,6 +84,17 @@ export const orderTools: Tool[] = [
 
 export const orderExtendedTools: Tool[] = [
   {
+    name: 'delete_order',
+    description: 'Supprimer une commande client brouillon',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID de la commande à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
     name: 'update_order',
     description: 'Modifier une commande client (dates, conditions, notes) — brouillon seulement',
     inputSchema: {
@@ -386,6 +397,10 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     case 'receive_supplier_order': {
       await api.post(`/supplierorders/${args.id}/receive`, { warehouse_id: args.warehouse_id });
       return `✅ Réception de la commande fournisseur #${args.id} enregistrée dans l'entrepôt #${args.warehouse_id}.`;
+    }
+    case 'delete_order': {
+      await api.delete(`/orders/${args.id}`);
+      return `✅ Commande #${args.id} supprimée.`;
     }
     case 'update_order': {
       const { id, ...rest } = args;
