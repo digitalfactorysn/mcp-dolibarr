@@ -24,6 +24,7 @@ import {
   handleCrmTool, handleProjectTool, handleHrTool, handleContractTool,
 } from "./tools/crm_projects_hr.js";
 import { setupTools, handleSetupTool } from "./tools/setup.js";
+import { adminTools, handleAdminTool } from "./tools/admin.js";
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ const ALL_TOOLS = [
   ...hrTools,
   ...contractTools,
   ...setupTools,
+  ...adminTools,
 ];
 
 // Build a lookup map: tool name -> category handler
@@ -70,7 +72,7 @@ const TOOL_NAME_SET = new Set(ALL_TOOLS.map((t) => t.name));
 const server = new Server(
   {
     name: "mcp-dolibarr",
-    version: "2.0.0",
+    version: "2.1.0",
   },
   {
     capabilities: {
@@ -119,6 +121,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await handleContractTool(name, safeArgs, api);
     } else if (setupTools.some((t) => t.name === name)) {
       result = await handleSetupTool(name, safeArgs, api);
+    } else if (adminTools.some((t) => t.name === name)) {
+      result = await handleAdminTool(name, safeArgs, api);
     } else {
       throw new McpError(ErrorCode.MethodNotFound, `Outil non assigné à un module: "${name}"`);
     }
@@ -150,7 +154,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`✅ MCP Dolibarr Expert Server v2.0.0 démarré (${ALL_TOOLS.length} outils disponibles)`);
+  console.error(`✅ MCP Dolibarr Expert Server v2.1.0 démarré (${ALL_TOOLS.length} outils disponibles)`);
   console.error(`   Instance Dolibarr: ${DOLIBARR_URL}`);
 }
 
