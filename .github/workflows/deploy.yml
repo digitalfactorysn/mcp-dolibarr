@@ -1,0 +1,25 @@
+name: Deploy MCP Dolibarr
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rebuild Docker container via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            cd /opt/1panel/apps/mcp-dolibarr
+            git pull origin master
+            docker compose build --no-cache
+            docker compose up -d
+            sleep 5
+            curl -s https://mcp.digitalfactory.sn/health
