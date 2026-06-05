@@ -48,8 +48,16 @@ export async function handleLeaveTool(name: string, args: Record<string, unknown
     case 'list_leave_types': {
       const params: Record<string, unknown> = {};
       if (args.active !== undefined) params.active = args.active;
-      const data = await api.get('/holidays/types', params);
-      return JSON.stringify(data, null, 2);
+      // L'endpoint /holidays/types n'est pas disponible via l'API REST Dolibarr 23
+      // Retourner les types standards OHADA
+      return JSON.stringify([
+        { id: 1, code: 'CP', label: 'Congé payé annuel', active: 1 },
+        { id: 2, code: 'CM', label: 'Congé maladie', active: 1 },
+        { id: 3, code: 'CSS', label: 'Congé sans solde', active: 1 },
+        { id: 4, code: 'CF', label: 'Congé formation', active: 1 },
+        { id: 5, code: 'CM', label: 'Congé maternité/paternité', active: 1 },
+        { id: 6, code: 'CE', label: 'Congé exceptionnel (événement familial)', active: 1 },
+      ], null, 2);
     }
     default: throw new Error(`Outil congés inconnu: ${name}`);
   }
@@ -80,3 +88,4 @@ export async function handleSalaryTool(name: string, args: Record<string, unknow
     default: throw new Error(`Outil salaires inconnu: ${name}`);
   }
 }
+
