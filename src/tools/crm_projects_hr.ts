@@ -225,12 +225,15 @@ export async function handleCrmTool(name: string, args: Record<string, unknown>,
     case 'create_agenda_event': {
       const datep = Math.floor(new Date(args.datep as string).getTime() / 1000);
       const datep2 = args.datep2 ? Math.floor(new Date(args.datep2 as string).getTime() / 1000) : datep + 3600;
+      const meInfo = await api.get<Record<string,unknown>>('/users/info') as Record<string,unknown>;
       const payload = {
         ...args,
         datep,
         datep2,
         typecode: args.typecode || 'AC_RDV',
         fulldayevent: args.fulldayevent || 0,
+        userownerid: args.userownerid || meInfo.id || 1,
+        socid: args.socid || 0,
       };
       const id = await api.post('/agendaevents', payload);
       return `✅ Événement CRM créé. ID: ${id}\nType: ${payload.typecode} | Label: ${args.label}`;
@@ -324,4 +327,5 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       throw new Error(`Outil Contrat inconnu: ${name}`);
   }
 }
+
 
