@@ -127,7 +127,7 @@ export const supplierOrderTools: Tool[] = [
   },
   {
     name: 'get_supplier_order',
-    description: 'Obtenir les détails d'une commande fournisseur',
+    description: "Obtenir les details d'une commande fournisseur",
     inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la commande fournisseur' } }, required: ['id'] },
   },
   {
