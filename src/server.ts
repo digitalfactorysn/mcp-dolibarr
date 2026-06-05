@@ -30,6 +30,7 @@ import { mailingTools, resourceTools, handleMailingTool, handleResourceTool } fr
 import { donationTools, loanTools, handleDonationTool, handleLoanTool } from "./tools/donations_loans.js";
 import { expenseReportTools, handleExpenseReportTool } from "./tools/expense_reports.js";
 import { accountingAdvancedTools, handleAccountingAdvancedTool } from "./tools/accounting_advanced.js";
+import { accountingConfigTools, handleAccountingConfigTool } from "./tools/accounting_config.js";
 import { pricingTools, handlePricingTool } from "./tools/pricing.js";
 import { notificationTools, handleNotificationTool } from "./tools/notifications.js";
 
@@ -49,6 +50,7 @@ const ALL_TOOLS = [
   ...donationTools, ...loanTools,
   ...expenseReportTools,
   ...accountingAdvancedTools,
+    ...accountingConfigTools,
   ...pricingTools,
   ...notificationTools,
 ];
@@ -85,6 +87,7 @@ async function routeTool(name: string, args: Record<string, unknown>, api: Dolib
     { tools: loanTools, h: handleLoanTool },
     { tools: expenseReportTools, h: handleExpenseReportTool },
     { tools: accountingAdvancedTools, h: handleAccountingAdvancedTool },
+    { tools: accountingConfigTools, h: handleAccountingConfigTool },
     { tools: pricingTools, h: handlePricingTool },
     { tools: notificationTools, h: handleNotificationTool },
   ];
