@@ -231,6 +231,7 @@ export async function handleCrmTool(name: string, args: Record<string, unknown>,
         datep,
         datep2,
         typecode: args.typecode || 'AC_RDV',
+        type_code: args.typecode || 'AC_RDV',
         fulldayevent: args.fulldayevent || 0,
         userownerid: args.userownerid || meInfo.id || 1,
         socid: args.socid || 0,
@@ -327,5 +328,6 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       throw new Error(`Outil Contrat inconnu: ${name}`);
   }
 }
+
 
 
