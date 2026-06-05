@@ -102,10 +102,13 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
     }
 
     case 'reconcile_bank_line': {
+      const releve = String(args.num_releve || '').replace(/[^a-zA-Z0-9]/g, '');
       await api.put(`/bankaccounts/${args.account_id}/lines/${args.line_id}`, {
-        num_releve: args.num_releve, rappro: 1
+        label: 'Reconciliation',
+        num_releve: releve,
+        rappro: 1,
       });
-      return `✅ Ligne bancaire #${args.line_id} rapprochée (relevé: ${args.num_releve}).`;
+      return `✅ Ligne bancaire #${args.line_id} rapprochée. Relevé: ${releve}`;
     }
 
     case 'get_aged_balance': {
