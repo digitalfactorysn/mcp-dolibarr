@@ -253,7 +253,7 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
     case 'get_project': {
       const [project, tasks] = await Promise.all([
         api.get(`/projects/${args.id}`),
-        api.get(`/projects/${args.id}/tasks`),
+        api.get('/tasks', { project_id: args.id, limit: 100 }),
       ]);
       return JSON.stringify({ project, tasks }, null, 2);
     }
@@ -267,14 +267,14 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
     case 'list_tasks': {
       const params: Record<string, unknown> = { limit: args.limit || 100 };
       if (args.project_id) params.filters = `fk_projet:${args.project_id}`;
-      const data = await api.get('/projects/tasks', params);
+      const data = await api.get('/tasks', params);
       return JSON.stringify(data, null, 2);
     }
     case 'create_task': {
       const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
       const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
       const payload = { ...args, date_start, date_end };
-      const id = await api.post(`/projects/${args.project_id}/tasks`, payload);
+      const id = await api.post('/tasks', { ...payload, fk_project: args.project_id });
       return `✅ Tâche créée dans le projet #${args.project_id}. ID tâche: ${id}\nLabel: ${args.label}`;
     }
     default:
@@ -324,3 +324,4 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       throw new Error(`Outil Contrat inconnu: ${name}`);
   }
 }
+
