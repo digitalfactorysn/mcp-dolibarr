@@ -159,9 +159,9 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
       const unpaidArr = Array.isArray(unpaidInvoices) ? unpaidInvoices : [];
       const bankArr = Array.isArray(bankAccounts) ? bankAccounts : [];
 
-      const totalCA = paidArr.reduce((s: number, inv: unknown) => s + ((inv as Record<string, number>).total_ttc || 0), 0);
-      const totalUnpaid = unpaidArr.reduce((s: number, inv: unknown) => s + ((inv as Record<string, number>).total_ttc || 0), 0);
-      const totalBalance = bankArr.reduce((s: number, acc: unknown) => s + ((acc as Record<string, number>).balance || 0), 0);
+      const totalCA = paidArr.reduce((s: number, inv: unknown) => s + Number((inv as Record<string, number>).total_ttc || 0), 0);
+      const totalUnpaid = unpaidArr.reduce((s: number, inv: unknown) => s + Number((inv as Record<string, number>).total_ttc || 0), 0);
+      const totalBalance = bankArr.reduce((s: number, acc: unknown) => s + Number((acc as Record<string, number>).balance || 0), 0);
 
       return JSON.stringify({
         annee: year,
@@ -177,4 +177,5 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
       throw new Error(`Outil inconnu: ${name}`);
   }
 }
+
 
