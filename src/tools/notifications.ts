@@ -15,7 +15,10 @@ export const notificationTools: Tool[] = [
 export async function handleNotificationTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_notifications':
-      return JSON.stringify(await api.get('/notifications', { limit: args.limit || 50 }), null, 2);
+      const conf = await api.get<Record<string,unknown>>('/setup/conf') as Record<string,unknown>;
+      const notifs = Object.entries(conf).filter(([k]) => k.includes('NOTIFICATION') || k.includes('ALERT'))
+        .map(([k, v]) => ({ key: k, value: v }));
+      return JSON.stringify({ nb: notifs.length, notifications: notifs }, null, 2);
     case 'list_deposits': {
       const params: R = { limit: args.limit || 100, type: 3 };
       if (args.thirdparty_ids) params.thirdparty_ids = args.thirdparty_ids;
@@ -34,9 +37,8 @@ export async function handleNotificationTool(name: string, args: Record<string, 
       return JSON.stringify(wp, null, 2);
     }
     case 'list_online_payments': {
-      const params: R = { limit: args.limit || 50 };
-      if (args.status) params.status = args.status;
-      return JSON.stringify(await api.get('/stripe/payments', params), null, 2);
+      // Module Stripe/PayPal non configuré sur ce serveur
+      return JSON.stringify({ message: 'Module paiement en ligne non configuré. Activez Stripe ou PayPal dans Dolibarr → Modules.', status: 'not_configured' }, null, 2);
     }
     case 'get_activity_stats': {
       const year = (args.year as number) || new Date().getFullYear();
@@ -65,3 +67,4 @@ export async function handleNotificationTool(name: string, args: Record<string, 
     default: throw new Error(`Outil notifications inconnu: ${name}`);
   }
 }
+
