@@ -114,7 +114,7 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
     case 'create_proposal': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const fin_validite = args.fin_validite ? Math.floor(new Date(args.fin_validite as string).getTime() / 1000) : null;
-      const payload = { ...args, date, fin_validite };
+      const payload = { ...args, date, fin_validite, user_author_id: Number(args.user_author_id) || 1 };
       delete (payload as Record<string, unknown>).fin_validite;
       const id = await api.post('/proposals', payload);
       return `✅ Devis créé avec succès. ID: ${id}\nProchaine étape: Ajoutez des lignes avec 'add_proposal_line', puis validez avec 'validate_proposal'.`;
