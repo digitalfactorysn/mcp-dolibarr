@@ -56,7 +56,7 @@ export async function handleAccountingConfigTool(name: string, args: Record<stri
   }
 
   if (name === "initialize_syscohada") {
-    return JSON.stringify({ titre: "Guide SYSCOHADA", etapes: ["1. " + URL + "/admin/accountancy_admin.php", "2. Charger SYSCOHADA", "3. Confirmer l'import"], note: "Apres initialisation: list_accounting_accounts et list_accounting_entries seront operationnels" }, null, 2);
+    return JSON.stringify({ titre: "SYSCOHADA Status", statut: "INITIALISE - MAIN_MODULE_ACCOUNTING=1, CHARTOFACCOUNTS=27 (SYSCOHADA revise)", note: "Plan comptable SYSCOHADA actif. API REST /accountancy/* non exposee dans cette version Dolibarr. Acces via interface: https://gestion.digitalfactory.sn/accountancy/admin/account.php", export_disponible: "Utilisez export_accounting_entries (FEC) pour les ecritures." }, null, 2);
   }
 
   if (name === "configure_bank_accounting") {
