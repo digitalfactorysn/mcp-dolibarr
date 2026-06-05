@@ -144,24 +144,33 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
       }
     }
     case 'get_financial_summary': {
-      const year = args.year || new Date().getFullYear();
-      const startTs = Math.floor(new Date(`${year}-01-01`).getTime() / 1000);
-      const endTs = Math.floor(new Date(`${year}-12-31`).getTime() / 1000);
+      const year = Number(args.year) || new Date().getFullYear();
 
-      // Factures validées de l'année
-      const [paidInvoices, unpaidInvoices, bankAccounts] = await Promise.all([
-        api.get<unknown[]>('/invoices', { status: 2, limit: 500, datestart: startTs, dateend: endTs }),
-        api.get<unknown[]>('/invoices', { status: 1, limit: 500 }),
+      // Récupérer toutes les factures + comptes bancaires
+      const [allInvoices, bankAccounts] = await Promise.all([
+        api.get<unknown[]>('/invoices', { limit: 500 }),
         api.get<unknown[]>('/bankaccounts', { status: 1 }),
       ]);
 
-      const paidArr = Array.isArray(paidInvoices) ? paidInvoices : [];
-      const unpaidArr = Array.isArray(unpaidInvoices) ? unpaidInvoices : [];
-      const bankArr = Array.isArray(bankAccounts) ? bankAccounts : [];
+      const allArr   = Array.isArray(allInvoices) ? allInvoices as Record<string, unknown>[] : [];
+      const bankArr  = Array.isArray(bankAccounts) ? bankAccounts as Record<string, unknown>[] : [];
 
-      const totalCA = paidArr.reduce((s: number, inv: unknown) => s + Number((inv as Record<string, number>).total_ttc || 0), 0);
-      const totalUnpaid = unpaidArr.reduce((s: number, inv: unknown) => s + Number((inv as Record<string, number>).total_ttc || 0), 0);
-      const totalBalance = bankArr.reduce((s: number, acc: unknown) => s + Number((acc as Record<string, number>).balance || 0), 0);
+      // Filtrer par année via le champ date (timestamp)
+      const yearStart = Math.floor(new Date(`${year}-01-01`).getTime() / 1000);
+      const yearEnd   = Math.floor(new Date(`${year}-12-31T23:59:59`).getTime() / 1000);
+
+      const yearArr = allArr.filter(inv => {
+        const d = Number(inv.date || 0);
+        return d >= yearStart && d <= yearEnd;
+      });
+
+      // Séparation payées / impayées par champ paye
+      const paidArr   = yearArr.filter(inv => String(inv.paye) === '1' || String(inv.statut) === '2');
+      const unpaidArr = yearArr.filter(inv => String(inv.paye) === '0' && (String(inv.statut) === '1' || String(inv.statut) === '2'));
+
+      const totalCA      = paidArr.reduce((s, inv) => s + Number(inv.total_ttc || 0), 0);
+      const totalUnpaid  = unpaidArr.reduce((s, inv) => s + Number(inv.remaintopay || inv.total_ttc || 0), 0);
+      const totalBalance = bankArr.reduce((s, acc) => s + Number(acc.balance || 0), 0);
 
       return JSON.stringify({
         annee: year,
