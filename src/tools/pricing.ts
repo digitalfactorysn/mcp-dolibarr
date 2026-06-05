@@ -14,7 +14,23 @@ export const pricingTools: Tool[] = [
 export async function handlePricingTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'get_product_prices':
-      return JSON.stringify(await api.get(`/products/${args.product_id}/prices`), null, 2);
+      // L'API REST Dolibarr 23 n'expose pas /products/{id}/prices
+      // Récupérer le prix via /products/{id}
+      const product = await api.get<Record<string,unknown>>(`/products/${args.product_id}`);
+      const p = product as Record<string,unknown>;
+      return JSON.stringify({
+        product_id: args.product_id,
+        ref: p.ref,
+        label: p.label,
+        price_ht: p.price,
+        price_ttc: p.price_ttc,
+        price_base_type: p.price_base_type,
+        tva_tx: p.tva_tx,
+        price_min: p.price_min,
+        price_min_ttc: p.price_min_ttc,
+        multiprices: p.multiprices || {},
+        note: 'Prix niveau 1 (standard). Niveaux tarifaires via multiprices si activés.'
+      }, null, 2);
     case 'set_product_price': {
       const payload = { price: args.price, price_ttc: args.price_ttc, price_base_type: args.price_base_type || 'HT', tva_tx: args.tva_tx || 18, price_level: args.price_level || 1 };
       await api.post(`/products/${args.product_id}/prices`, payload);
@@ -37,9 +53,17 @@ export async function handlePricingTool(name: string, args: Record<string, unkno
       return `✅ Remise de ${args.discount_percent}% définie pour le client #${args.thirdparty_id}.`;
     }
     case 'list_exceptional_discounts': {
-      const data = await api.get('/discounts', { thirdparty_id: args.thirdparty_id });
-      return JSON.stringify(data, null, 2);
+      const tp = await api.get<Record<string,unknown>>(`/thirdparties/${args.thirdparty_id}`);
+      const p = tp as Record<string,unknown>;
+      return JSON.stringify({
+        thirdparty_id: args.thirdparty_id,
+        nom: p.name,
+        remise_client_percent: p.remise_percent || 0,
+        remise_supplier_percent: p.remise_supplier_percent || 0,
+        note: 'Remises commerciales permanentes. Remises exceptionnelles (avoirs) à consulter dans Dolibarr → Commercial → Remises.'
+      }, null, 2);
     }
     default: throw new Error(`Outil tarification inconnu: ${name}`);
   }
 }
+
