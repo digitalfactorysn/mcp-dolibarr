@@ -46,9 +46,9 @@ export async function handleNotificationTool(name: string, args: Record<string, 
       const s = month ? `${year}-${String(month).padStart(2,'0')}-01` : `${year}-01-01`;
       const e = month ? `${year}-${String(month).padStart(2,'0')}-${new Date(year, month, 0).getDate()}` : `${year}-12-31`;
       const [inv, ord, prop] = await Promise.all([
-        api.get<unknown[]>('/invoices',  { status: 2, limit: 500, sqlfilters: `(t.datef:>='${s}') and (t.datef:<='${e}')` }),
-        api.get<unknown[]>('/orders',    { limit: 200, sqlfilters: `(t.date_commande:>='${s}') and (t.date_commande:<='${e}')` }),
-        api.get<unknown[]>('/proposals', { limit: 200, sqlfilters: `(t.date_valid:>='${s}') and (t.date_valid:<='${e}')` }),
+        api.get<unknown[]>('/invoices',  { status: 2, limit: 500, datestart: Math.floor(new Date(s).getTime()/1000), dateend: Math.floor(new Date(e).getTime()/1000) }),
+        api.get<unknown[]>('/orders',    { limit: 200, datestart: Math.floor(new Date(s).getTime()/1000), dateend: Math.floor(new Date(e).getTime()/1000) }),
+        api.get<unknown[]>('/proposals', { limit: 200, datestart: Math.floor(new Date(s).getTime()/1000), dateend: Math.floor(new Date(e).getTime()/1000) }),
       ]);
       const invA  = (Array.isArray(inv)  ? inv  : []) as R[];
       const ordA  = (Array.isArray(ord)  ? ord  : []) as R[];
@@ -67,4 +67,5 @@ export async function handleNotificationTool(name: string, args: Record<string, 
     default: throw new Error(`Outil notifications inconnu: ${name}`);
   }
 }
+
 
