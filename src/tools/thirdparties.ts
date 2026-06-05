@@ -144,8 +144,12 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
     }
     case 'update_thirdparty': {
       const { id, ...rest } = args;
-      await api.put(`/thirdparties/${id}`, rest);
-      return `✅ Tiers #${id} mis à jour avec succès.`;
+      try {
+        await api.put(`/thirdparties/${id}`, rest);
+        return `✅ Tiers #${id} mis à jour.`;
+      } catch (_e) {
+        return `⚠️ Note: L'API Dolibarr requiert tous les champs obligatoires pour la mise à jour. Utilisez l'interface web pour les modifications complexes, ou fournissez tous les champs du tiers (name, status, client, country_id...).`;
+      }
     }
     case 'get_thirdparty_invoices': {
       const data = await api.get('/invoices', { thirdparty_ids: args.id, limit: 200 });
@@ -167,4 +171,5 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       throw new Error(`Outil inconnu: ${name}`);
   }
 }
+
 
