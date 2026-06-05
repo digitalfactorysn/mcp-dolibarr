@@ -9,7 +9,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Rebuild Docker container via SSH
+      - name: Checkout latest code
+        uses: actions/checkout@v4
+
+      - name: Copy src to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          source: "src/,package*.json,tsconfig.json,Dockerfile,docker-compose.yml"
+          target: /opt/1panel/apps/mcp-dolibarr/
+
+      - name: Rebuild Docker on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -17,12 +30,17 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           command_timeout: 15m
+          script_stop: true
           script: |
+            set -e
             cd /opt/1panel/apps/mcp-dolibarr
-            git fetch origin master
-            git reset --hard origin/master
-            docker compose down
-            docker compose build --no-cache --pull
+            echo "=== Files updated ==="
+            grep "version" src/http.ts | head -1
+            grep -c "get_supplier_order" src/tools/orders.ts && echo "get_supplier_order present"
+            grep -c "Number(totalCA)" src/tools/accounting.ts && echo "Number(totalCA) present"
+            echo "=== Rebuild ==="
+            docker compose down --remove-orphans
+            docker compose build --no-cache
             docker compose up -d
-            sleep 8
+            sleep 10
             curl -s https://mcp.digitalfactory.sn/health
