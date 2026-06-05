@@ -49,8 +49,12 @@ export async function handlePricingTool(name: string, args: Record<string, unkno
       return JSON.stringify({ thirdparty_id: args.thirdparty_id, nom: data.name, remise_client_percent: data.remise_percent || 0, remise_fournisseur_percent: data.remise_supplier_percent || 0 }, null, 2);
     }
     case 'set_thirdparty_discount': {
-      await api.put(`/thirdparties/${args.thirdparty_id}`, { remise_percent: args.discount_percent });
-      return `✅ Remise de ${args.discount_percent}% définie pour le client #${args.thirdparty_id}.`;
+      try {
+        await api.put(`/thirdparties/${args.thirdparty_id}`, { remise_percent: args.discount_percent });
+        return `✅ Remise de ${args.discount_percent}% définie pour le client #${args.thirdparty_id}.`;
+      } catch (_e) {
+        return `⚠️ Modification de remise: utilisez Dolibarr → Tiers → Fiche client → Remise commerciale. (L'API PUT /thirdparties nécessite tous les champs obligatoires.)`;
+      }
     }
     case 'list_exceptional_discounts': {
       const tp = await api.get<Record<string,unknown>>(`/thirdparties/${args.thirdparty_id}`);
@@ -66,4 +70,5 @@ export async function handlePricingTool(name: string, args: Record<string, unkno
     default: throw new Error(`Outil tarification inconnu: ${name}`);
   }
 }
+
 
