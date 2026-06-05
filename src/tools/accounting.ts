@@ -165,11 +165,11 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
 
       return JSON.stringify({
         annee: year,
-        chiffre_affaires_TTC: totalCA.toFixed(2),
+        chiffre_affaires_TTC: Number(totalCA).toFixed(2),
         nb_factures_payees: paidArr.length,
-        total_factures_impayees_TTC: totalUnpaid.toFixed(2),
+        total_factures_impayees_TTC: Number(totalUnpaid).toFixed(2),
         nb_factures_impayees: unpaidArr.length,
-        solde_tresorerie_total: totalBalance.toFixed(2),
+        solde_tresorerie_total: Number(totalBalance).toFixed(2),
         nb_comptes_bancaires: bankArr.length,
       }, null, 2);
     }
