@@ -148,22 +148,23 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       return `✅ Tiers #${id} mis à jour avec succès.`;
     }
     case 'get_thirdparty_invoices': {
-      const data = await api.get(`/thirdparties/${args.id}/invoices`);
+      const data = await api.get('/invoices', { thirdparty_ids: args.id, limit: 200 });
       return JSON.stringify(data, null, 2);
     }
     case 'get_thirdparty_proposals': {
-      const data = await api.get(`/thirdparties/${args.id}/proposals`);
+      const data = await api.get('/proposals', { thirdparty_ids: args.id, limit: 200 });
       return JSON.stringify(data, null, 2);
     }
     case 'get_thirdparty_orders': {
-      const data = await api.get(`/thirdparties/${args.id}/orders`);
+      const data = await api.get('/orders', { thirdparty_ids: args.id, limit: 200 });
       return JSON.stringify(data, null, 2);
     }
     case 'get_thirdparty_contacts': {
-      const data = await api.get(`/thirdparties/${args.id}/contacts`);
+      const data = await api.get('/contacts', { socid: args.id, limit: 100 });
       return JSON.stringify(data, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);
   }
 }
+
