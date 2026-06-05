@@ -158,7 +158,7 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     }
     case 'create_order': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const payload = { ...args, date };
+      const payload = { ...args, date, user_author_id: Number(args.user_author_id) || 1 };
       const id = await api.post('/orders', payload);
       return `✅ Commande client créée. ID: ${id}`;
     }
@@ -188,7 +188,7 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     }
     case 'create_supplier_order': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/supplierorders', { ...args, date });
+      const id = await api.post('/supplierorders', { ...args, date, user_author_id: Number(args.user_author_id) || 1 });
       return `✅ Commande fournisseur créée. ID: ${id}`;
     }
     case 'add_supplier_order_line': {
