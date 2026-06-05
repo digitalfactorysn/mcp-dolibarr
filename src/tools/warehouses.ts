@@ -29,9 +29,10 @@ export async function handleWarehouseTool(name: string, args: Record<string, unk
       return `✅ Entrepôt "${args.label}" créé. ID: ${id}`;
     }
     case 'get_warehouse_stock': {
-      const data = await api.get(`/warehouses/${args.id}/stock`, { limit: args.limit || 200 });
+      const data = await api.get(`/warehouses/${args.id}/products`, { limit: args.limit || 200 });
       return JSON.stringify(data, null, 2);
     }
     default: throw new Error(`Outil entrepôt inconnu: ${name}`);
   }
 }
+
