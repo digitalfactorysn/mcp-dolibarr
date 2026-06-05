@@ -33,7 +33,13 @@ const ACCOUNT_MAP: Record<string, string> = {
 function configUrl(path: string): string { return `${DOLIBARR}${path}`; }
 
 export async function handleAccountingConfigTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
-  const conf = await api.get<Record<string, unknown>>("/setup/conf");
+  let conf: Record<string, unknown> = {};
+  try {
+    conf = await api.get<Record<string, unknown>>("/setup/conf") as Record<string, unknown>;
+  } catch (_confErr) {
+    // /setup/conf GET peut échouer dans certains contextes
+    conf = {};
+  }
 
   switch (name) {
 
