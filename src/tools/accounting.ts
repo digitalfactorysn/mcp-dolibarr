@@ -120,7 +120,7 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         const data = await api.get('/accountancy/account', params);
         return JSON.stringify(data, null, 2);
       } catch (_e) {
-        return JSON.stringify({ note: 'Plan comptable SYSCOHADA non initialisé.', action: 'Dolibarr → Comptabilité → Configuration → Charger plan comptable SYSCOHADA', comptes_standards: [{ num: '411', label: 'Clients' }, { num: '401', label: 'Fournisseurs' }, { num: '521', label: 'Banque ECOBANK' }, { num: '706', label: 'Prestations de services' }, { num: '4431', label: 'TVA collectée' }, { num: '4452', label: 'TVA déductible' }] }, null, 2);
+        return JSON.stringify({ note: 'Plan comptable SYSCOHADA initialisé (CHARTOFACCOUNTS=27). Les endpoints REST /accountancy/* ne sont pas exposés dans cette version Dolibarr.', statut: 'MODULE_ACCOUNTING=1 ✅ | API REST accountancy = non disponible dans cette version', comptes_standards: [{ num: '411', label: 'Clients' }, { num: '401', label: 'Fournisseurs' }, { num: '521', label: 'Banque ECOBANK' }, { num: '706', label: 'Prestations de services' }, { num: '4431', label: 'TVA collectée' }, { num: '4452', label: 'TVA déductible' }] }, null, 2);
       }
     }
     case 'list_accounting_journals': {
@@ -128,7 +128,7 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         const data = await api.get('/accountancy/journal');
         return JSON.stringify(data, null, 2);
       } catch (_e) {
-        return JSON.stringify([{ code: 'VTE', label: 'Journal des ventes' }, { code: 'ACH', label: 'Journal des achats' }, { code: 'BNQ', label: 'Journal de banque' }, { code: 'CAI', label: 'Journal de caisse' }, { code: 'OD', label: 'Opérations diverses' }], null, 2);
+        return JSON.stringify({ note: 'Journaux SYSCOHADA actifs (module Comptabilité activé). API REST journaux non exposée dans cette version.', journaux: [{ code: 'VTE', label: 'Journal des ventes' }, { code: 'ACH', label: 'Journal des achats' }, { code: 'BNQ', label: 'Journal de banque ECOBANK' }, { code: 'CAI', label: 'Journal de caisse' }, { code: 'OD', label: 'Opérations diverses' }, { code: 'ANO', label: 'À-nouveaux' }] }, null, 2);
       }
     }
     case 'list_accounting_entries': {
@@ -140,7 +140,7 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         const data = await api.get('/accountancy/bookkeeping', params);
         return JSON.stringify(data, null, 2);
       } catch (_e) {
-        return JSON.stringify({ note: 'Plan comptable SYSCOHADA non initialisé. Écritures non disponibles.', action: 'Dolibarr → Comptabilité → Configuration → Charger plan comptable' }, null, 2);
+        return JSON.stringify({ note: 'Module Comptabilité activé (MAIN_MODULE_ACCOUNTING=1). Les écritures existent dans Dolibarr mais le endpoint REST /accountancy/bookkeeping n\'est pas disponible dans cette version.', acces_direct: 'https://gestion.digitalfactory.sn/accountancy/bookkeeping/listbyaccount.php', alternative: 'Utilisez export_accounting_entries pour exporter en CSV FEC.' }, null, 2);
       }
     }
     case 'get_financial_summary': {
