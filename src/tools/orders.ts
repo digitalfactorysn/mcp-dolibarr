@@ -126,6 +126,11 @@ export const supplierOrderTools: Tool[] = [
     },
   },
   {
+    name: 'get_supplier_order',
+    description: 'Obtenir les détails d'une commande fournisseur',
+    inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la commande fournisseur' } }, required: ['id'] },
+  },
+  {
     name: 'validate_supplier_order',
     description: 'Valider une commande fournisseur',
     inputSchema: {
@@ -171,6 +176,10 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return `✅ Commande #${args.id} facturée. ID facture générée: ${invoiceId}`;
     }
     // Supplier orders
+    case 'get_supplier_order': {
+      const data = await api.get(`/supplierorders/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
     case 'list_supplier_orders': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
       if (args.status !== undefined) params.status = args.status;
@@ -195,3 +204,4 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       throw new Error(`Outil inconnu: ${name}`);
   }
 }
+
