@@ -165,7 +165,7 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
     }
     case 'create_invoice': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const payload = { ...args, date };
+      const payload = { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 };
       delete (payload as Record<string, unknown>).date;
       const id = await api.post('/invoices', payload);
       return `✅ Facture brouillon créée avec succès.\nID facture: ${id}\nTiers ID: ${args.socid}\nProchaine étape: Ajoutez des lignes avec 'add_invoice_line', puis validez avec 'validate_invoice'.`;
