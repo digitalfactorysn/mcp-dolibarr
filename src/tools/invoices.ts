@@ -205,16 +205,16 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
     case 'add_payment_to_invoice': {
       const payDate = args.datepaye ? Math.floor(new Date(args.datepaye as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const invoice = await api.get<Record<string, unknown>>(`/invoices/${args.id}`);
-      const amount = args.amount || (invoice.total_ttc as number);
-      const payload = {
+      const totalTtc = Number(invoice.total_ttc);
+      const amount = args.amount !== undefined ? Number(args.amount) : totalTtc;
+      const payload: Record<string, unknown> = {
         datepaye: payDate,
-        paiementid: args.payment_mode_id,
+        paymentid: args.payment_mode_id,
         closepaidinvoices: args.closepaidinvoices || 'yes',
         accountid: args.accountid,
-        comment: args.comment || '',
-        amounts: { [args.id as string]: amount },
       };
-      const paymentId = await api.post('/invoices/paymentsdistributed', payload);
+      if (args.comment) payload.comment = args.comment;
+      const paymentId = await api.post(`/invoices/${args.id}/payments`, payload);
       return `✅ Paiement de ${amount} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
     }
     case 'create_credit_note': {

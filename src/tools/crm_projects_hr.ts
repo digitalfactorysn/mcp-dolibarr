@@ -270,7 +270,7 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
     }
     case 'list_tasks': {
       const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.project_id) params.filters = `fk_projet:${args.project_id}`;
+      if (args.project_id) params.sqlfilters = `(fk_projet:=:${args.project_id})`;
       const data = await api.get('/tasks', params);
       return JSON.stringify(data, null, 2);
     }
@@ -317,10 +317,11 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       return JSON.stringify(data, null, 2);
     }
     case 'create_contract': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
+      const date_contrat = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
       const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date, date_start, date_end };
+      const { date: _date, ...restArgs } = args as Record<string, unknown>;
+      const payload = { ...restArgs, date_contrat, date_start, date_end };
       const id = await api.post('/contracts', payload);
       return `✅ Contrat créé pour le tiers #${args.socid}. ID contrat: ${id}`;
     }
