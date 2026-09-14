@@ -157,6 +157,34 @@ export const hrTools: Tool[] = [
     },
   },
   {
+    name: 'get_user',
+    description: "Obtenir les détails d'un utilisateur Dolibarr",
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'number', description: "ID de l'utilisateur" } },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_user',
+    description: "Créer un nouvel utilisateur Dolibarr (employé, collaborateur). Seul 'login' est obligatoire côté API, mais renseigner lastname/email est fortement recommandé.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        login: { type: 'string', description: "Identifiant de connexion (unique, ex: 'prenom.nom')" },
+        lastname: { type: 'string', description: 'Nom de famille' },
+        firstname: { type: 'string', description: 'Prénom' },
+        email: { type: 'string', description: 'Email professionnel' },
+        pass: { type: 'string', description: 'Mot de passe initial (optionnel, Dolibarr peut en générer un si le module est configuré)' },
+        employee: { type: 'number', description: '1=Employé/salarié, 0=Non-salarié (freelance, externe...). Défaut: 1' },
+        admin: { type: 'number', description: '1=Administrateur. Défaut: 0. Réservé à un appel fait par un admin.' },
+        job: { type: 'string', description: 'Fonction/poste' },
+        fk_soc: { type: 'number', description: "ID société si c'est un utilisateur externe rattaché à un tiers" },
+      },
+      required: ['login'],
+    },
+  },
+  {
     name: 'list_expenses',
     description: 'Lister les notes de frais',
     inputSchema: {
@@ -294,6 +322,15 @@ export async function handleHrTool(name: string, args: Record<string, unknown>, 
       else params.active = 1;
       const data = await api.get('/users', params);
       return JSON.stringify(data, null, 2);
+    }
+    case 'get_user': {
+      const data = await api.get(`/users/${args.id}`);
+      return JSON.stringify(data, null, 2);
+    }
+    case 'create_user': {
+      const payload = { ...args, employee: args.employee ?? 1 };
+      const id = await api.post('/users', payload);
+      return `✅ Utilisateur créé. ID: ${id}\nLogin: ${args.login}${args.lastname ? ` | Nom: ${args.lastname}` : ''}`;
     }
     case 'list_expenses': {
       const params: Record<string, unknown> = { limit: args.limit || 100 };
