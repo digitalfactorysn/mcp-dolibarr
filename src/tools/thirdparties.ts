@@ -13,7 +13,7 @@ export const thirdpartyTools: Tool[] = [
         sortfield: { type: 'string', description: 'Champ de tri (ex: t.nom, t.datec)' },
         sortorder: { type: 'string', enum: ['ASC', 'DESC'], description: 'Ordre de tri' },
         mode: { type: 'number', description: '1=clients seulement, 2=prospects, 3=cli+pros, 4=fournisseurs' },
-        sqlfilters: { type: 'string', description: "Filtre SQL: ex: (t.nom:like:'%Digital%')" },
+        sqlfilters: { type: 'string', description: "Filtre Dolibarr, ex: (t.nom:like:'%Dupont%')" },
       },
     },
   },
@@ -43,7 +43,7 @@ export const thirdpartyTools: Tool[] = [
         address: { type: 'string', description: 'Adresse postale' },
         zip: { type: 'string', description: 'Code postal' },
         town: { type: 'string', description: 'Ville' },
-        country_id: { type: 'number', description: 'ID pays (ex: 221 pour Sénégal)' },
+        country_id: { type: 'number', description: 'ID pays (voir list_countries)' },
         tva_intracom: { type: 'string', description: 'Numéro TVA intracommunautaire' },
         siret: { type: 'string', description: 'SIRET ou NINEA' },
         note_public: { type: 'string', description: 'Note publique sur le tiers' },
@@ -144,12 +144,8 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
     }
     case 'update_thirdparty': {
       const { id, ...rest } = args;
-      try {
-        await api.put(`/thirdparties/${id}`, rest);
-        return `✅ Tiers #${id} mis à jour.`;
-      } catch (_e) {
-        return `⚠️ Note: L'API Dolibarr requiert tous les champs obligatoires pour la mise à jour. Utilisez l'interface web pour les modifications complexes, ou fournissez tous les champs du tiers (name, status, client, country_id...).`;
-      }
+      await api.put(`/thirdparties/${id}`, rest);
+      return `✅ Tiers #${id} mis à jour.`;
     }
     case 'get_thirdparty_invoices': {
       const data = await api.get('/invoices', { thirdparty_ids: args.id, limit: 200 });

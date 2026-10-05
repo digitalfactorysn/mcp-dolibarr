@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { addFilter } from '../validation.js';
 
 export const warehouseTools: Tool[] = [
   { name: 'list_warehouses', description: "Lister les entrepôts/dépôts de stock", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, status: { type: 'number', description: '1=Actifs (défaut), 0=Tous' }, sqlfilters: { type: 'string' } } } },
@@ -8,15 +9,12 @@ export const warehouseTools: Tool[] = [
   { name: 'get_warehouse_stock', description: "Consulter le stock de tous les produits dans un entrepôt", inputSchema: { type: 'object', properties: { id: { type: 'number' }, limit: { type: 'number' } }, required: ['id'] } },
 ];
 
-// Supprimé: batchTools (501 - pas d'API REST dans Dolibarr 23)
-export const batchTools: Tool[] = [];
-
 export async function handleWarehouseTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_warehouses': {
       const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.status !== undefined) params.status = args.status; else params.status = 1;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
+      addFilter(params, `(t.statut:=:${Number(args.status ?? 1)})`);
+      if (args.sqlfilters) addFilter(params, args.sqlfilters);
       const data = await api.get('/warehouses', params);
       return JSON.stringify(data, null, 2);
     }

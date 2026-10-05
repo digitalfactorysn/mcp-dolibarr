@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { addFilter, toTimestamp } from '../validation.js';
 
 export const proposalTools: Tool[] = [
   {
@@ -62,25 +63,24 @@ export const proposalTools: Tool[] = [
   },
   {
     name: 'validate_proposal',
-    description: 'Valider un devis brouillon (le rend visible et envoyable au client)',
+    description: 'Valider un devis brouillon (le rend officiel et envoyable au client). Pour le marquer signé, utiliser close_proposal avec status=2.',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du devis' },
-        status: { type: 'number', description: '1=Validé/Envoyé, 2=Signé. Défaut: 1' },
       },
       required: ['id'],
     },
   },
   {
     name: 'close_proposal',
-    description: "Clôturer un devis (marquer comme refusé ou expiré sans conversion)",
+    description: "Clôturer un devis validé : signé (accepté) ou refusé",
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du devis' },
-        status: { type: 'number', description: '3=Refusé, 4=Expiré. Défaut: 3' },
-        note: { type: 'string', description: 'Raison de la clôture' },
+        status: { type: 'number', description: '2=Signé, 3=Refusé. Défaut: 3' },
+        note: { type: 'string', description: 'Raison de la clôture (ajoutée à la note privée)' },
       },
       required: ['id'],
     },
@@ -102,8 +102,8 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
   switch (name) {
     case 'list_proposals': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
+      if (args.status !== undefined) addFilter(params, `(t.fk_statut:=:${Number(args.status)})`);
+      if (args.sqlfilters) addFilter(params, args.sqlfilters);
       const data = await api.get('/proposals', params);
       return JSON.stringify(data, null, 2);
     }
@@ -112,10 +112,8 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       return JSON.stringify(data, null, 2);
     }
     case 'create_proposal': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const fin_validite = args.fin_validite ? Math.floor(new Date(args.fin_validite as string).getTime() / 1000) : null;
-      const payload = { ...args, date, fin_validite, user_author_id: Number(args.user_author_id) || 1 };
-      delete (payload as Record<string, unknown>).fin_validite;
+      const payload: Record<string, unknown> = { ...args, date: args.date ? toTimestamp(args.date) : Math.floor(Date.now() / 1000) };
+      if (args.fin_validite) payload.fin_validite = toTimestamp(args.fin_validite, 'fin_validite');
       const id = await api.post('/proposals', payload);
       return `✅ Devis créé avec succès. ID: ${id}\nProchaine étape: Ajoutez des lignes avec 'add_proposal_line', puis validez avec 'validate_proposal'.`;
     }
@@ -125,19 +123,21 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       return `✅ Ligne ajoutée au devis #${id}. ID ligne: ${lineId}`;
     }
     case 'validate_proposal': {
-      const status = args.status || 1;
-      await api.post(`/proposals/${args.id}/validate`, { status });
-      return `✅ Devis #${args.id} validé (statut: ${status === 2 ? 'Signé' : 'Envoyé'}).`;
+      await api.post(`/proposals/${args.id}/validate`, {});
+      return `✅ Devis #${args.id} validé.`;
     }
     case 'close_proposal': {
-      const status = args.status || 3;
-      await api.post(`/proposals/${args.id}/close`, { status, note: args.note || '' });
-      return `✅ Devis #${args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`;
+      const status = args.status ?? 3;
+      if (status !== 2 && status !== 3) throw new Error('status doit valoir 2 (signé) ou 3 (refusé).');
+      await api.post(`/proposals/${args.id}/close`, { status, note_private: args.note || '' });
+      return `✅ Devis #${args.id} clôturé (statut: ${status === 2 ? 'Signé' : 'Refusé'}).`;
     }
     case 'convert_proposal_to_order': {
-      const data = await api.post(`/proposals/${args.id}/close`, { status: 2 });
-      // Then create order from proposal
-      const orderId = await api.post('/orders', { origin: 'propal', origin_id: args.id });
+      const proposal = await api.get<Record<string, unknown>>(`/proposals/${args.id}`);
+      if (Number(proposal.statut ?? proposal.status) !== 2) {
+        throw new Error(`Le devis #${args.id} n'est pas signé. Clôturez-le d'abord avec close_proposal (status=2).`);
+      }
+      const orderId = await api.post(`/orders/createfromproposal/${args.id}`, {});
       return `✅ Devis #${args.id} converti en commande client. ID commande: ${orderId}`;
     }
     default:

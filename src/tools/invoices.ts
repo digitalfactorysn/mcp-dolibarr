@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { invoiceStatusParam, toTimestamp } from '../validation.js';
 
 export const invoiceTools: Tool[] = [
   {
@@ -11,8 +12,8 @@ export const invoiceTools: Tool[] = [
         limit: { type: 'number', description: 'Nombre max (défaut: 100)' },
         page: { type: 'number', description: 'Page de pagination' },
         status: { type: 'number', description: '0=Brouillon, 1=Impayée, 2=Payée, 3=Abandonnée' },
-        thirdparty_ids: { type: 'string', description: 'ID(s) tiers, séparés par virgule' },
-        sqlfilters: { type: 'string', description: "Filtre SQL: ex: (t.date_lim_reglement:lt:'2024-12-31')" },
+        thirdparty_ids: { type: 'string', description: 'ID(s) tiers, séparés par virgule (ex: "12" ou "12,15")' },
+        sqlfilters: { type: 'string', description: "Filtre Dolibarr, ex: (t.date_lim_reglement:<:'2024-12-31')" },
       },
     },
   },
@@ -105,20 +106,6 @@ export const invoiceTools: Tool[] = [
     },
   },
   {
-    name: 'send_invoice_email',
-    description: "Envoyer une facture par email au client. Génère le PDF Dolibarr et l'attache.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'number', description: 'ID de la facture' },
-        sendto: { type: 'string', description: 'Email destinataire' },
-        subject: { type: 'string', description: "Sujet de l'email" },
-        message: { type: 'string', description: "Corps de l'email" },
-      },
-      required: ['id', 'sendto'],
-    },
-  },
-  {
     name: 'add_payment_to_invoice',
     description: "Enregistrer un paiement (règlement) sur une facture validée",
     inputSchema: {
@@ -127,21 +114,23 @@ export const invoiceTools: Tool[] = [
         id: { type: 'number', description: 'ID de la facture' },
         datepaye: { type: 'string', description: "Date du paiement ISO 8601 (ex: '2025-01-31')" },
         payment_mode_id: { type: 'number', description: 'ID du mode de paiement (utiliser list_payment_methods)' },
-        closepaidinvoices: { type: 'string', description: '"yes" pour fermer la facture si totalement payée (défaut: yes)' },
+        closepaidinvoices: { type: 'string', enum: ['yes', 'no'], description: '"yes" pour fermer la facture si totalement payée (défaut: yes)' },
         accountid: { type: 'number', description: 'ID compte bancaire pour enregistrement (utiliser list_bank_accounts)' },
-        amount: { type: 'number', description: 'Montant payé (si partiel, sinon total TTC)' },
-        comment: { type: 'string', description: 'Commentaire/référence du paiement (ex: N° virement)' },
+        amount: { type: 'number', description: 'Montant payé (si partiel). Si vide : reste à payer' },
+        num_payment: { type: 'string', description: 'Numéro de paiement (ex: N° de chèque ou de virement)' },
+        comment: { type: 'string', description: 'Commentaire du paiement' },
       },
-      required: ['id', 'datepaye', 'payment_mode_id'],
+      required: ['id', 'datepaye', 'payment_mode_id', 'accountid'],
     },
   },
   {
     name: 'create_credit_note',
-    description: "Créer un avoir (facture de crédit) à partir d'une facture existante",
+    description: "Créer un avoir brouillon (facture de crédit) rattaché à une facture existante. Ajoutez ensuite les lignes avec add_invoice_line.",
     inputSchema: {
       type: 'object',
       properties: {
         source_invoice_id: { type: 'number', description: 'ID de la facture source à contrepasser' },
+        date: { type: 'string', description: "Date de l'avoir ISO 8601. Si vide: aujourd'hui" },
         description: { type: 'string', description: "Raison de l'avoir" },
       },
       required: ['source_invoice_id'],
@@ -153,7 +142,7 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
   switch (name) {
     case 'list_invoices': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
+      if (args.status !== undefined) params.status = invoiceStatusParam(args.status);
       if (args.thirdparty_ids) params.thirdparty_ids = args.thirdparty_ids;
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/invoices', params);
@@ -164,10 +153,8 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       return JSON.stringify(data, null, 2);
     }
     case 'create_invoice': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const payload = { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 };
-      delete (payload as Record<string, unknown>).date;
-      const id = await api.post('/invoices', payload);
+      const date = args.date ? toTimestamp(args.date) : Math.floor(Date.now() / 1000);
+      const id = await api.post('/invoices', { ...args, type: args.type ?? 0, date });
       return `✅ Facture brouillon créée avec succès.\nID facture: ${id}\nTiers ID: ${args.socid}\nProchaine étape: Ajoutez des lignes avec 'add_invoice_line', puis validez avec 'validate_invoice'.`;
     }
     case 'add_invoice_line': {
@@ -192,38 +179,27 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       });
       return `✅ Facture #${args.id} validée avec succès. Elle est maintenant officielle et envoyable au client.`;
     }
-    case 'send_invoice_email': {
-      const payload = {
-        sendto: args.sendto,
-        subject: args.subject || `Facture N°`,
-        message: args.message || 'Veuillez trouver ci-joint votre facture.',
-        attach_pdf: 1,
-      };
-      await api.post(`/invoices/${args.id}/sendbyemail`, payload);
-      return `✅ Facture #${args.id} envoyée par email à ${args.sendto}.`;
-    }
     case 'add_payment_to_invoice': {
-      const payDate = args.datepaye ? Math.floor(new Date(args.datepaye as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const invoice = await api.get<Record<string, unknown>>(`/invoices/${args.id}`);
-      const amount = args.amount || (invoice.total_ttc as number);
       const payload = {
-        datepaye: payDate,
-        paiementid: args.payment_mode_id,
+        datepaye: toTimestamp(args.datepaye, 'datepaye'),
+        payment_mode_id: args.payment_mode_id,
         closepaidinvoices: args.closepaidinvoices || 'yes',
         accountid: args.accountid,
+        num_payment: args.num_payment || '',
         comment: args.comment || '',
-        amounts: { [args.id as string]: amount },
+        amount: args.amount,
       };
-      const paymentId = await api.post('/invoices/paymentsdistributed', payload);
-      return `✅ Paiement de ${amount} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
+      const paymentId = await api.post(`/invoices/${args.id}/payments`, payload);
+      return `✅ Paiement${args.amount ? ` de ${args.amount}` : ''} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
     }
     case 'create_credit_note': {
       const sourceInvoice = await api.get<Record<string, unknown>>(`/invoices/${args.source_invoice_id}`);
       const payload = {
         socid: sourceInvoice.socid,
         type: 2, // Avoir
-        fac_rec: args.source_invoice_id,
-        note_public: args.description || `Avoir sur facture #${args.source_invoice_id}`,
+        fk_facture_source: args.source_invoice_id,
+        date: args.date ? toTimestamp(args.date) : Math.floor(Date.now() / 1000),
+        note_public: args.description || `Avoir sur facture ${sourceInvoice.ref ?? '#' + args.source_invoice_id}`,
       };
       const id = await api.post('/invoices', payload);
       return `✅ Avoir (facture de crédit) créé. ID: ${id}. Associé à la facture source #${args.source_invoice_id}.`;

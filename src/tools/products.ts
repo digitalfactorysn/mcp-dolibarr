@@ -39,9 +39,8 @@ export const productTools: Tool[] = [
         type: { type: 'number', description: '0=Produit physique, 1=Service. Défaut: 1' },
         price: { type: 'number', description: 'Prix HT de vente' },
         price_ttc: { type: 'number', description: 'Prix TTC (calculé si price fourni)' },
-        tva_tx: { type: 'number', description: 'Taux TVA % (ex: 18)' },
-        price_base_type: { type: 'string', description: '"HT" ou "TTC". Défaut: HT' },
-        stock: { type: 'number', description: 'Stock initial (pour produits physiques)' },
+        tva_tx: { type: 'number', description: 'Taux TVA % (ex: 20)' },
+        price_base_type: { type: 'string', enum: ['HT', 'TTC'], description: 'Défaut: HT' },
         weight: { type: 'number', description: 'Poids en kg (pour produits physiques)' },
         barcode: { type: 'string', description: 'Code barre / EAN' },
         status: { type: 'number', description: '1=En vente, 0=Inactif' },
@@ -49,7 +48,7 @@ export const productTools: Tool[] = [
         accountancy_code_sell: { type: 'string', description: 'Code comptable de vente' },
         accountancy_code_buy: { type: 'string', description: "Code comptable d'achat" },
       },
-      required: ['ref', 'label'],
+      required: ['ref', 'label', 'tva_tx'],
     },
   },
   {
@@ -116,7 +115,6 @@ export async function handleProductTool(name: string, args: Record<string, unkno
         price_base_type: 'HT',
         status: 1,
         status_buy: 1,
-        tva_tx: 18,
         ...args,
       };
       const id = await api.post('/products', payload);
@@ -141,8 +139,8 @@ Label: ${args.label}`;
         qty: args.qty,
         price: args.price || 0,
         label: args.label || 'Mouvement de stock via MCP',
-        codeinventory: args.codeinventory || '',
-        type_mouvement: (args.qty as number) > 0 ? 0 : 1, // 0=Entrée, 1=Sortie
+        movementcode: args.codeinventory || '',
+        type: (args.qty as number) > 0 ? 3 : 2, // 3=Entrée, 2=Sortie
       };
       await api.post('/stockmovements', payload);
       const direction = (args.qty as number) > 0 ? 'Entrée' : 'Sortie';

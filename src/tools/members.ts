@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { addFilter, toTimestamp } from '../validation.js';
 
 export const memberTools: Tool[] = [
   { name: 'list_members', description: "Lister les membres/adhérents", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, status: { type: 'number', description: '-1=Tous, 0=Brouillon, 1=Actif, 2=Exclu, 3=Résilié' }, sqlfilters: { type: 'string' } } } },
@@ -13,8 +14,8 @@ export async function handleMemberTool(name: string, args: Record<string, unknow
   switch (name) {
     case 'list_members': {
       const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
+      if (args.status !== undefined && Number(args.status) !== -1) addFilter(params, `(t.statut:=:${Number(args.status)})`);
+      if (args.sqlfilters) addFilter(params, args.sqlfilters);
       const data = await api.get('/members', params);
       return JSON.stringify(data, null, 2);
     }
@@ -23,8 +24,9 @@ export async function handleMemberTool(name: string, args: Record<string, unknow
       return JSON.stringify(data, null, 2);
     }
     case 'create_member': {
-      if (args.datefin) args.datefin = Math.floor(new Date(args.datefin as string).getTime() / 1000);
-      const id = await api.post('/members', args);
+      const payload = { ...args };
+      if (payload.datefin) payload.datefin = toTimestamp(payload.datefin, 'datefin');
+      const id = await api.post('/members', payload);
       return `✅ Membre créé. ID: ${id}\nNom: ${args.firstname || ''} ${args.lastname}`;
     }
     case 'list_member_types': {
@@ -32,11 +34,11 @@ export async function handleMemberTool(name: string, args: Record<string, unknow
       return JSON.stringify(data, null, 2);
     }
     case 'subscribe_member': {
-      const date = Math.floor(new Date(args.date as string).getTime() / 1000);
-      const dateend = Math.floor(new Date(args.dateend as string).getTime() / 1000);
+      const date = toTimestamp(args.date);
+      const dateend = toTimestamp(args.dateend, 'dateend');
       const payload = { date, dateend, amount: args.amount, label: args.label || 'Cotisation', accountid: args.accountid };
       const id = await api.post(`/members/${args.id}/subscriptions`, payload);
-      return `✅ Cotisation enregistrée pour le membre #${args.id}. ID: ${id}. Montant: ${args.amount} FCFA`;
+      return `✅ Cotisation enregistrée pour le membre #${args.id}. ID: ${id}. Montant: ${args.amount}`;
     }
     default: throw new Error(`Outil inconnu: ${name}`);
   }

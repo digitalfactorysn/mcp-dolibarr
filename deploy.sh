@@ -1,93 +1,65 @@
 #!/bin/bash
-# deploy.sh — Script de déploiement VPS pour mcp-dolibarr HTTP
-# Digital Factory Senegal — https://digitalfactory.sn
+# deploy.sh — Déploiement du serveur MCP Dolibarr en mode HTTP sur votre propre serveur
 #
-# Usage : ./deploy.sh
-# Prérequis : Node.js >=18, npm, nginx, certbot
+# Usage :
+#   DOMAIN=mcp.example.com CERTBOT_EMAIL=admin@example.com ./deploy.sh
+#
+# À lancer depuis une copie du dépôt que vous avez vous-même vérifiée.
+# Prérequis : Node.js >= 18, npm, nginx, certbot
 
-set -e
+set -euo pipefail
 
-APP_DIR="/opt/mcp-dolibarr"
+: "${DOMAIN:?Définissez DOMAIN (ex: mcp.example.com)}"
+: "${CERTBOT_EMAIL:?Définissez CERTBOT_EMAIL pour Let's Encrypt}"
+APP_DIR="${APP_DIR:-/opt/mcp-dolibarr}"
 SERVICE_NAME="mcp-dolibarr"
-REPO_URL="https://github.com/digitalfactorysn/mcp-dolibarr.git"
-DOMAIN="mcp.digitalfactory.sn"
+SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Déploiement MCP Dolibarr — Digital Factory"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "━━━ Déploiement MCP Dolibarr → $APP_DIR ($DOMAIN) ━━━"
 
-# ── 1. Cloner ou mettre à jour le repo ──
-if [ -d "$APP_DIR/.git" ]; then
-  echo "📦 Mise à jour du code..."
-  cd "$APP_DIR"
-  git pull origin master
-else
-  echo "📦 Clonage du dépôt..."
-  sudo mkdir -p "$APP_DIR"
-  sudo chown "$USER:$USER" "$APP_DIR"
-  git clone "$REPO_URL" "$APP_DIR"
-  cd "$APP_DIR"
-fi
+# ── 1. Copier le code vérifié ──
+sudo mkdir -p "$APP_DIR"
+sudo rsync -a --delete --exclude node_modules --exclude build --exclude .git --exclude .env "$SRC_DIR/" "$APP_DIR/"
+sudo chown -R "$USER:$USER" "$APP_DIR"
+cd "$APP_DIR"
 
-# ── 2. Installer les dépendances ──
-echo "📦 Installation des dépendances..."
-npm install
-
-# ── 3. Compiler TypeScript ──
-echo "🔨 Compilation TypeScript..."
+# ── 2. Installer les dépendances (versions figées par package-lock.json) et compiler ──
+npm ci --ignore-scripts
 npm run build
+npm prune --omit=dev
 
-# ── 4. Créer le fichier .env si absent ──
+# ── 3. Créer le fichier .env si absent ──
 if [ ! -f "$APP_DIR/.env" ]; then
-  echo "⚙️  Création du fichier .env..."
-  cat > "$APP_DIR/.env" << EOF
-# Configuration MCP Dolibarr — Digital Factory Senegal
-DOLIBARR_URL=https://erp.digitalfactory.sn/api/index.php
-DOLIBARR_API_KEY=VOTRE_CLE_API_DOLIBARR
-
-# Port d'écoute (défaut : 3000)
-PORT=3000
-
-# Token d'authentification optionnel pour protéger l'endpoint MCP
-# Si défini, les clients doivent envoyer : Authorization: Bearer <token>
-# MCP_API_TOKEN=un_token_secret_fort
-EOF
-  echo "⚠️  Éditez $APP_DIR/.env avec vos vraies valeurs !"
+  cp .env.example .env
+  TOKEN="$(openssl rand -hex 32)"
+  sed -i "s|^MCP_API_TOKEN=.*|MCP_API_TOKEN=$TOKEN|" .env
+  chmod 600 .env
+  echo "⚠️  Éditez $APP_DIR/.env (DOLIBARR_URL, DOLIBARR_API_KEY) puis relancez ce script."
+  echo "    Jeton Bearer généré : voir MCP_API_TOKEN dans $APP_DIR/.env"
+  exit 0
 fi
+sudo chown www-data:www-data "$APP_DIR/.env"
+sudo chmod 600 "$APP_DIR/.env"
 
-# ── 5. Installer le service systemd ──
-echo "⚙️  Configuration du service systemd..."
+# ── 4. Service systemd ──
 sudo cp systemd/mcp-dolibarr.service /etc/systemd/system/
 sudo sed -i "s|/opt/mcp-dolibarr|$APP_DIR|g" /etc/systemd/system/mcp-dolibarr.service
 sudo systemctl daemon-reload
 sudo systemctl enable "$SERVICE_NAME"
 sudo systemctl restart "$SERVICE_NAME"
 
-# ── 6. Configurer Nginx ──
-echo "🌐 Configuration Nginx..."
+# ── 5. Nginx ──
 sudo cp nginx/mcp-dolibarr.conf /etc/nginx/sites-available/mcp-dolibarr
-sudo sed -i "s|mcp.digitalfactory.sn|$DOMAIN|g" /etc/nginx/sites-available/mcp-dolibarr
+sudo sed -i "s|mcp.example.com|$DOMAIN|g" /etc/nginx/sites-available/mcp-dolibarr
 sudo ln -sf /etc/nginx/sites-available/mcp-dolibarr /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
-# ── 7. Certificat SSL ──
-echo "🔐 Génération du certificat SSL..."
-sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email infos@digitalfactory.sn || \
+# ── 6. Certificat SSL ──
+sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$CERTBOT_EMAIL" || \
   echo "⚠️  Certbot déjà configuré ou erreur — vérifiez manuellement."
 
-# ── 8. Test final ──
 sleep 3
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ Déploiement terminé !"
-echo ""
-echo "  Health check : https://$DOMAIN/health"
-echo "  Endpoint MCP : https://$DOMAIN/mcp"
-echo ""
-echo "  Statut service :"
+echo "✅ Déploiement terminé."
+echo "   Health check : https://$DOMAIN/health"
+echo "   Endpoint MCP : https://$DOMAIN/mcp (Authorization: Bearer <MCP_API_TOKEN>)"
 sudo systemctl status "$SERVICE_NAME" --no-pager | head -8
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "📋 Ajoutez dans Claude.ai > Settings > MCP Servers :"
-echo "   URL : https://$DOMAIN/mcp"
-echo "   (+ Authorization: Bearer <token> si MCP_API_TOKEN configuré)"

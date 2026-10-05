@@ -1,6 +1,7 @@
 {
   "name": "mcp-dolibarr",
-  "version": "2.1.0",
+  "version": "2.2.0",
+  "private": true,
   "description": "A comprehensive Model Context Protocol (MCP) server for Dolibarr ERP/CRM. Enables AI assistants (Claude, Cursor, Windsurf, etc.) to act as full Dolibarr experts: invoicing, accounting, CRM, HR, projects, configuration and much more.",
   "main": "build/index.js",
   "type": "module",
@@ -14,7 +15,8 @@
     "start:http": "node build/http.js",
     "dev": "node --loader ts-node/esm src/index.ts",
     "dev:http": "node --loader ts-node/esm src/http.ts",
-    "prepublishOnly": "npm run build"
+    "test": "npm run build && node --test build/*.test.js",
+    "test:e2e": "npm run build && node scripts/smoke-test.mjs"
   },
   "keywords": [
     "mcp",
@@ -31,7 +33,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/digitalfactorysn/mcp-dolibarr.git"
+    "url": "git+https://github.com/briceboudy/mcp-dolibarr.git"
   },
   "engines": {
     "node": ">=18.0.0"

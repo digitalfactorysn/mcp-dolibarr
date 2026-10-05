@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { addFilter, toTimestamp } from '../validation.js';
 
 export const orderTools: Tool[] = [
   {
@@ -71,7 +72,7 @@ export const orderTools: Tool[] = [
   },
   {
     name: 'convert_order_to_invoice',
-    description: "Facturer une commande client validée (génère automatiquement la facture correspondante)",
+    description: "Créer la facture brouillon correspondant à une commande client validée",
     inputSchema: {
       type: 'object',
       properties: {
@@ -147,8 +148,8 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
   switch (name) {
     case 'list_orders': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
+      if (args.status !== undefined) addFilter(params, `(t.fk_statut:=:${Number(args.status)})`);
+      if (args.sqlfilters) addFilter(params, args.sqlfilters);
       const data = await api.get('/orders', params);
       return JSON.stringify(data, null, 2);
     }
@@ -157,8 +158,9 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'create_order': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const payload = { ...args, date, user_author_id: Number(args.user_author_id) || 1 };
+      const { date_livraison, ...rest } = args;
+      const payload: Record<string, unknown> = { ...rest, date: args.date ? toTimestamp(args.date) : Math.floor(Date.now() / 1000) };
+      if (date_livraison) payload.delivery_date = toTimestamp(date_livraison, 'date_livraison');
       const id = await api.post('/orders', payload);
       return `✅ Commande client créée. ID: ${id}`;
     }
@@ -172,7 +174,7 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return `✅ Commande #${args.id} validée.`;
     }
     case 'convert_order_to_invoice': {
-      const invoiceId = await api.post(`/orders/${args.id}/invoice`, {});
+      const invoiceId = await api.post(`/invoices/createfromorder/${args.id}`, {});
       return `✅ Commande #${args.id} facturée. ID facture générée: ${invoiceId}`;
     }
     // Supplier orders
@@ -182,13 +184,14 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     }
     case 'list_supplier_orders': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
+      if (args.status !== undefined) addFilter(params, `(t.fk_statut:=:${Number(args.status)})`);
+      if (args.sqlfilters) addFilter(params, args.sqlfilters);
       const data = await api.get('/supplierorders', params);
       return JSON.stringify(data, null, 2);
     }
     case 'create_supplier_order': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/supplierorders', { ...args, date, user_author_id: Number(args.user_author_id) || 1 });
+      const date = args.date ? toTimestamp(args.date) : Math.floor(Date.now() / 1000);
+      const id = await api.post('/supplierorders', { ...args, date });
       return `✅ Commande fournisseur créée. ID: ${id}`;
     }
     case 'add_supplier_order_line': {

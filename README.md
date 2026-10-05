@@ -1,105 +1,58 @@
-# MCP Dolibarr Expert 🚀
+# MCP Dolibarr
 
-[![npm version](https://img.shields.io/npm/v/mcp-dolibarr.svg)](https://www.npmjs.com/package/mcp-dolibarr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub](https://img.shields.io/badge/GitHub-digitalfactorysn-black?logo=github)](https://github.com/digitalfactorysn)
+Serveur **Model Context Protocol (MCP)** pour Dolibarr ERP/CRM : permet à un assistant IA (Claude, Cursor, Windsurf…) de consulter et, si vous l'autorisez, de modifier votre Dolibarr via son API REST (tiers, factures, devis, commandes, produits, stocks, projets, RH, comptabilité simplifiée…).
 
-> Un serveur **Model Context Protocol (MCP)** complet pour Dolibarr ERP/CRM. Permets à n'importe quel assistant IA (Claude, Cursor, Windsurf, etc.) d'agir comme un **expert Dolibarr à part entière** : facturation, comptabilité avancée, CRM, projets, stocks, contrats, configuration complète du système et bien plus.
-> 
-> **Développé par [Digital Factory Senegal](https://digitalfactory.sn)**  
-> 🌐 [digitalfactory.sn](https://digitalfactory.sn) &nbsp;|&nbsp; 📞 WhatsApp : [+221 77 800 38 14](https://wa.me/221778003814) &nbsp;|&nbsp; 📧 [infos@digitalfactory.sn](mailto:infos@digitalfactory.sn)
+> Fork renforcé du projet original de [Digital Factory Senegal](https://github.com/digitalfactorysn/mcp-dolibarr) (licence MIT). Voir [Sécurité](#-sécurité) pour les changements.
 
 ---
 
-## ✨ Fonctionnalités (55+ outils)
+## 🔐 Sécurité
 
-### 🏢 Tiers (Clients / Fournisseurs)
-- Lister, rechercher, créer, mettre à jour les tiers
-- Accéder à l'historique (factures, devis, commandes, contacts d'un tiers)
+### Où vont vos données ?
 
-### 📄 Facturation (10 outils)
-- Créer des factures brouillons, ajouter/modifier/supprimer des lignes
-- Valider des factures officiellement
-- Enregistrer des paiements avec ventilation multi-factures
-- Créer des avoirs (factures de crédit)
-- Envoyer des factures par email
+- Le serveur ne communique **qu'avec l'URL `DOLIBARR_URL` que vous fournissez**. Aucune télémétrie, aucun appel vers un service tiers.
+- En **mode local (stdio, recommandé)**, le serveur tourne sur votre machine : la clé API ne quitte votre poste que pour aller vers votre Dolibarr (HTTPS obligatoire).
+- Les données lues par les outils sont transmises à l'assistant IA que vous utilisez, comme toute conversation avec lui.
+- **N'utilisez pas un serveur MCP hébergé par un tiers** : il verrait passer votre clé API et vos données. Si vous avez besoin du mode HTTP, hébergez-le vous-même.
+- **Installez depuis ce dépôt**, pas via `npx mcp-dolibarr` : le paquet npm du même nom n'est pas ce code.
 
-### 📋 Devis & Propositions Commerciales
-- Créer, envoyer, valider, signer, refuser des devis
-- Convertir un devis signé en commande client
+### Bonnes pratiques
 
-### 📦 Commandes (Clients & Fournisseurs)
-- Gestion complète du cycle commande → livraison → facturation
-- Commandes fournisseurs et approvisionnement
+1. Créez un **utilisateur Dolibarr dédié** à l'IA, non administrateur, avec uniquement les permissions nécessaires, et générez sa clé API. C'est la protection la plus efficace : l'API ne peut rien faire au-delà de ces droits.
+2. Commencez en **lecture seule** (`DOLIBARR_READ_ONLY=true`) ; activez l'écriture seulement si besoin.
+3. Désactivez individuellement les outils que vous ne voulez pas exposer (`DOLIBARR_DISABLED_TOOLS`).
 
-### 🏭 Produits & Stocks
-- Catalogue produits et services avec prix, TVA, codes comptables
-- Consultation et mouvements de stock par entrepôt
+### Protections intégrées
 
-### 💰 Comptabilité & Trésorerie (Expert)
-- Consultation des comptes bancaires et transactions
-- Plan comptable et journaux comptables
-- Écritures du grand livre
-- **Rapport financier synthétique** : CA, impayés, solde de trésorerie
-
-### 🤝 CRM
-- Contacts individuels
-- Agenda d'activités (appels, RDV, emails commerciaux)
-
-### 📊 Projets & Tâches
-- Gérer des projets client avec budget et deadline
-- Créer et suivre des tâches
-
-### 👥 RH & Administration
-- Lister les utilisateurs/commerciaux
-- Consulter les notes de frais
-
-### 📑 Contrats & Abonnements
-- Créer et gérer des contrats client
-
-### ⚙️ Configuration & Administration Système
-- Informations de la société (avec mise à jour)
-- Activation/désactivation des modules
-- Lecture et écriture des constantes système
-- Modes et conditions de paiement, devises, pays
+- Les arguments des outils sont filtrés et typés selon leur schéma : impossible d'injecter des champs non prévus ou des segments de chemin dans les URLs.
+- Les outils portent les annotations MCP `readOnlyHint` / `destructiveHint`, ce qui permet au client de demander confirmation avant toute écriture.
+- Refus d'envoyer la clé API en HTTP non chiffré (hors `localhost`).
+- Mode HTTP : jeton Bearer **obligatoire** (comparaison en temps constant), écoute sur `127.0.0.1` par défaut, CORS fermé par défaut, `/health` ne divulgue aucune configuration, nombre de sessions plafonné.
+- Aucun outil ne modifie la configuration globale de Dolibarr, n'envoie d'email ou de campagne.
 
 ---
 
-## 🚀 Installation
+## 🚀 Installation (mode local, recommandé)
 
-### Méthode 1 : Via npx (recommandé, aucune installation)
-```bash
-npx mcp-dolibarr
-```
+Prérequis : Node.js ≥ 18.
 
-### Méthode 2 : Installation globale
 ```bash
-npm install -g mcp-dolibarr
-```
-
-### Méthode 3 : Depuis le code source
-```bash
-git clone https://github.com/digitalfactorysn/mcp-dolibarr.git
+git clone https://github.com/briceboudy/mcp-dolibarr.git
 cd mcp-dolibarr
-npm install && npm run build
+npm ci
+npm run build
+npm test
 ```
 
----
+### Activer l'API REST et créer la clé
 
-## ⚙️ Configuration
+1. Dolibarr : **Accueil > Configuration > Modules** → activez **API REST**.
+2. Créez un utilisateur dédié (ex. `assistant-ia`) avec les seules permissions utiles.
+3. Sur sa fiche : générez la **clé pour l'API**.
 
-### 1. Activer l'API REST dans Dolibarr
-Dans votre Dolibarr : **Accueil > Configuration > Modules > Activez "API REST Dolibarr"**
+### Connexion avec Claude Desktop
 
-### 2. Obtenir votre Clé API
-Dans votre Dolibarr : **Accueil > Utilisateurs & Groupes > [Votre profil] > Onglet "Fiche utilisateur"**  
-Copiez la valeur du champ **"Clé pour l'API REST"** (générez-en une si elle est vide).
-
----
-
-## 🔌 Connexion avec Claude Desktop
-
-Éditez le fichier de configuration de Claude Desktop :
+Fichier de configuration :
 - **Mac** : `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -107,88 +60,67 @@ Copiez la valeur du champ **"Clé pour l'API REST"** (générez-en une si elle e
 {
   "mcpServers": {
     "dolibarr": {
-      "command": "npx",
-      "args": ["mcp-dolibarr"],
+      "command": "node",
+      "args": ["/CHEMIN/ABSOLU/VERS/mcp-dolibarr/build/index.js"],
       "env": {
         "DOLIBARR_URL": "https://votre-instance.dolibarr.com",
-        "DOLIBARR_API_KEY": "VOTRE_CLE_API_SECRETE"
+        "DOLIBARR_API_KEY": "VOTRE_CLE_API",
+        "DOLIBARR_READ_ONLY": "true"
       }
     }
   }
 }
 ```
 
-> Redémarrez Claude Desktop. Un nouvel icône 🔌 apparaîtra — Dolibarr est connecté !
+### Connexion avec Claude Code
 
----
-
-## 🔌 Connexion avec Cursor / Windsurf
-
-Dans les paramètres MCP de votre IDE :
-```json
-{
-  "mcp": {
-    "servers": {
-      "dolibarr": {
-        "command": "npx",
-        "args": ["mcp-dolibarr"],
-        "env": {
-          "DOLIBARR_URL": "https://votre-instance.dolibarr.com",
-          "DOLIBARR_API_KEY": "VOTRE_CLE_API"
-        }
-      }
-    }
-  }
-}
+```bash
+claude mcp add dolibarr \
+  -e DOLIBARR_URL=https://votre-instance.dolibarr.com \
+  -e DOLIBARR_API_KEY=VOTRE_CLE_API \
+  -e DOLIBARR_READ_ONLY=true \
+  -- node /CHEMIN/ABSOLU/VERS/mcp-dolibarr/build/index.js
 ```
 
 ---
 
-## 💡 Exemples d'utilisation avec l'IA
+## ⚙️ Variables d'environnement
 
-Une fois connecté, vous pouvez demander à votre IA :
-
-```
-"Quelles sont les 5 dernières factures impayées ?"
-→ list_invoices (status=1, limit=5)
-
-"Crée un devis pour STN GROUPE pour la maintenance Azure à 150 000 FCFA HT avec 18% TVA"
-→ create_proposal → add_proposal_line → validate_proposal
-
-"Quel est notre chiffre d'affaires de 2025 ?"
-→ get_financial_summary (year=2025)
-
-"Montre-moi le plan comptable"
-→ list_accounting_accounts
-
-"Quels modules sont activés sur notre Dolibarr ?"
-→ list_modules
-```
-
----
-
-## 🔐 Sécurité
-
-- **Ne committez jamais** votre clé API dans un dépôt Git.
-- Utilisez un compte Dolibarr dédié avec les **permissions minimales** nécessaires.
-- La clé API est transmise uniquement entre votre machine locale et l'instance Dolibarr (pas via des services tiers).
-
----
-
-## 📜 License
-
-MIT © [Digital Factory Senegal](https://digitalfactory.sn)
-
----
-
-## 📞 Contact & Support
-
-| Canal | Lien |
+| Variable | Rôle |
 |---|---|
-| 🌐 Site web | [digitalfactory.sn](https://digitalfactory.sn) |
-| 📧 Email | [infos@digitalfactory.sn](mailto:infos@digitalfactory.sn) |
-| 💬 WhatsApp | [+221 77 800 38 14](https://wa.me/221778003814) |
-| 🐙 GitHub | [github.com/digitalfactorysn](https://github.com/digitalfactorysn) |
+| `DOLIBARR_URL` | URL de votre Dolibarr (HTTPS). `/api/index.php` est ajouté automatiquement. |
+| `DOLIBARR_API_KEY` | Clé API de l'utilisateur dédié. |
+| `DOLIBARR_READ_ONLY` | `true` : seuls les outils `list_*`, `get_*`, `export_*` sont exposés. |
+| `DOLIBARR_DISABLED_TOOLS` | Outils à masquer, séparés par des virgules. |
+| `DOLIBARR_ALLOW_INSECURE_HTTP` | `true` pour autoriser une URL `http://` distante (déconseillé). |
+| `MCP_API_TOKEN` | Mode HTTP uniquement : jeton Bearer obligatoire (≥ 32 caractères, `openssl rand -hex 32`). |
+| `HOST` / `PORT` | Mode HTTP : interface et port d'écoute (défaut `127.0.0.1:3000`). |
+| `MCP_CORS_ORIGINS` | Mode HTTP : origines navigateur autorisées (vide = aucune). |
+| `MCP_MAX_SESSIONS` | Mode HTTP : nombre maximal de sessions simultanées (défaut 50). |
 
-- **Issues & bugs** : [GitHub Issues](https://github.com/digitalfactorysn/mcp-dolibarr/issues)
-- **Contribuer** : Les Pull Requests sont les bienvenues !
+---
+
+## 🌐 Mode HTTP (auto-hébergé)
+
+Uniquement si vous devez accéder au serveur à distance (ex. connecteur Claude.ai). Voir `deploy.sh` (systemd + nginx + Let's Encrypt) ou `docker-compose.yml` (port exposé sur `127.0.0.1` uniquement, à placer derrière un reverse proxy HTTPS).
+
+```bash
+cp .env.example .env   # puis renseignez les valeurs, dont MCP_API_TOKEN
+npm run start:http
+```
+
+Le client doit envoyer `Authorization: Bearer <MCP_API_TOKEN>`.
+
+---
+
+## ✨ Outils disponibles
+
+Tiers, contacts, agenda, factures clients (création, lignes, validation, paiements, avoirs), devis, commandes clients et fournisseurs, factures fournisseurs, produits, prix, stocks, entrepôts, expéditions, réceptions, interventions, tickets, projets et tâches, contrats, catégories, membres, dons, notes de frais, congés, salaires, nomenclatures et ordres de fabrication, documents (liste, téléchargement, génération PDF), comptes bancaires, et une comptabilité simplifiée (TVA, balance âgée, relevé client, export CSV) calculée à partir des factures validées, l'API REST de Dolibarr n'exposant pas le grand livre.
+
+Certaines opérations ne sont pas disponibles via l'API REST de Dolibarr et ont été retirées : envoi d'emails, envoi de campagnes, modification de la configuration, rapprochement bancaire, écritures comptables manuelles.
+
+---
+
+## 📜 Licence
+
+MIT. Projet original © [Digital Factory Senegal](https://digitalfactory.sn).

@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { addFilter, toTimestamp } from '../validation.js';
 
 export const interventionTools: Tool[] = [
   { name: 'list_interventions', description: "Lister les fiches d'intervention. Statut: 0=Brouillon, 1=Validée, 2=Facturée, 3=Abandonnée", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, page: { type: 'number' }, status: { type: 'number' }, thirdparty_id: { type: 'number' }, sqlfilters: { type: 'string' } } } },
@@ -14,9 +15,9 @@ export async function handleInterventionTool(name: string, args: Record<string, 
   switch (name) {
     case 'list_interventions': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
+      if (args.status !== undefined) addFilter(params, `(t.fk_statut:=:${Number(args.status)})`);
       if (args.thirdparty_id) params.thirdparty_ids = args.thirdparty_id;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
+      if (args.sqlfilters) addFilter(params, args.sqlfilters);
       const data = await api.get('/interventions', params);
       return JSON.stringify(data, null, 2);
     }
@@ -25,13 +26,13 @@ export async function handleInterventionTool(name: string, args: Record<string, 
       return JSON.stringify(data, null, 2);
     }
     case 'create_intervention': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/interventions', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
+      const date = args.date ? toTimestamp(args.date) : Math.floor(Date.now() / 1000);
+      const id = await api.post('/interventions', { ...args, date });
       return `✅ Fiche d'intervention créée. ID: ${id}`;
     }
     case 'add_intervention_line': {
       const { id, ...line } = args;
-      if (line.date) line.date = Math.floor(new Date(line.date as string).getTime() / 1000);
+      if (line.date) line.date = toTimestamp(line.date);
       const lineId = await api.post(`/interventions/${id}/lines`, line);
       return `✅ Ligne ajoutée à l'intervention #${id}. ID ligne: ${lineId}`;
     }

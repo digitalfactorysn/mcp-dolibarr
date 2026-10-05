@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mcp-dolibarr:
     build:
@@ -7,15 +5,22 @@ services:
       dockerfile: Dockerfile
     container_name: mcp-dolibarr
     restart: unless-stopped
+    # Exposé uniquement sur la machine hôte : placez un reverse proxy HTTPS devant
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     environment:
-      - DOLIBARR_URL=${DOLIBARR_URL}
-      - DOLIBARR_API_KEY=${DOLIBARR_API_KEY}
+      - DOLIBARR_URL=${DOLIBARR_URL:?DOLIBARR_URL requis}
+      - DOLIBARR_API_KEY=${DOLIBARR_API_KEY:?DOLIBARR_API_KEY requis}
+      - MCP_API_TOKEN=${MCP_API_TOKEN:?MCP_API_TOKEN requis (openssl rand -hex 32)}
+      - DOLIBARR_READ_ONLY=${DOLIBARR_READ_ONLY:-false}
+      - DOLIBARR_DISABLED_TOOLS=${DOLIBARR_DISABLED_TOOLS:-}
       - PORT=3100
-      - MCP_API_TOKEN=${MCP_API_TOKEN:-}
-    networks:
-      - 1panel-network
+      - HOST=0.0.0.0
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     mem_limit: 256m
     memswap_limit: 256m
     logging:
@@ -23,7 +28,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-networks:
-  1panel-network:
-    external: true
