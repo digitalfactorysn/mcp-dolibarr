@@ -142,27 +142,66 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
     }
     case 'create_thirdparty': {
       const payload: Record<string, unknown> = { ...args };
-      // Dolibarr exige un code_client (-1 déclenche le module de numérotation automatique)
-      if (args.code_client === 'auto' || (!args.code_client && args.client !== 0)) {
-        payload.code_client = '-1';
+      const route = '/thirdparties';
+
+      // 1. Accepter une création avec seulement name
+      // Traiter correctement client et fournisseur uniquement si spécifiés
+      if (args.client !== undefined && args.client !== null) {
+        payload.client = Number(args.client);
+        // Si client > 0 (1=client, 2=prospect, 3=client+prospect), Dolibarr exige un code_client (-1 déclenche la numérotation automatique)
+        if (Number(payload.client) > 0 && (!payload.code_client || payload.code_client === 'auto')) {
+          payload.code_client = '-1';
+        }
       }
-      // Dolibarr exige un code_fournisseur (-1 déclenche le module de numérotation automatique)
-      if (args.code_fournisseur === 'auto' || (!args.code_fournisseur && args.fournisseur === 1)) {
-        payload.code_fournisseur = '-1';
+
+      if (args.fournisseur !== undefined && args.fournisseur !== null) {
+        payload.fournisseur = Number(args.fournisseur);
+        // Si fournisseur = 1, Dolibarr exige un code_fournisseur (-1 déclenche la numérotation automatique)
+        if (Number(payload.fournisseur) === 1 && (!payload.code_fournisseur || payload.code_fournisseur === 'auto')) {
+          payload.code_fournisseur = '-1';
+        }
       }
-      const id = await api.post<number>('/thirdparties', payload);
-      const created = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
-      return JSON.stringify({
-        applied: true,
-        verified: !!created,
-        id,
-        name: created?.name || args.name,
-        code_client: created?.code_client,
-        code_fournisseur: created?.code_fournisseur,
-        client: created?.client ?? args.client,
-        fournisseur: created?.fournisseur ?? args.fournisseur,
-        thirdparty: created || { id, ...payload },
-      }, null, 2);
+
+      console.log(`[create_thirdparty] Route utilisée : POST ${route}`);
+      console.log(`[create_thirdparty] Payload envoyé :`, JSON.stringify(payload));
+
+      try {
+        const id = await api.post<number>(route, payload);
+
+        // 2. Relecture immédiate après création
+        const created = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
+
+        return JSON.stringify({
+          applied: true,
+          verified: !!created,
+          circuit_breaker: 'NORMAL',
+          route_used: `POST ${route}`,
+          id: Number(id),
+          name: created?.name || args.name,
+          client: created?.client ?? payload.client,
+          fournisseur: created?.fournisseur ?? payload.fournisseur,
+          code_client: created?.code_client,
+          code_fournisseur: created?.code_fournisseur,
+          status: created?.status,
+          verification: {
+            status: created ? 'VERIFIED' : 'UNVERIFIED',
+            readback_id: created?.id,
+            details: created,
+          },
+          thirdparty: created || { id, ...payload },
+        }, null, 2);
+      } catch (err: any) {
+        console.error(`[create_thirdparty] Erreur Dolibarr sur POST ${route}:`, err);
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          circuit_breaker: 'TRIGGERED',
+          route_used: `POST ${route}`,
+          error: err.message,
+          dolibarr_error_body: err.dolibarrData || null,
+          payload_sent: payload,
+        }, null, 2);
+      }
     }
     case 'update_thirdparty': {
       const { id, ...rest } = args;

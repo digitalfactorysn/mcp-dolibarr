@@ -25,7 +25,7 @@ export async function handleTicketTool(name: string, args: Record<string, unknow
       return JSON.stringify(data, null, 2);
     }
     case 'create_ticket': {
-      const payload = {
+      const payload: Record<string, unknown> = {
         subject: args.subject,
         message: args.message,
         socid: args.socid,
@@ -35,25 +35,101 @@ export async function handleTicketTool(name: string, args: Record<string, unknow
         fk_user_assign: args.fk_user_assign,
         date_creation: Math.floor(Date.now() / 1000),
       };
-      const id = await api.post<number>('/tickets', payload);
+
+      let id: number | null = null;
+      let networkRetryRecovered = false;
+
+      try {
+        id = await api.post<number>('/tickets', payload);
+      } catch (err: any) {
+        console.warn(`[create_ticket] Requête POST /tickets interrompue ou timeout. Vérification d'existence...`, err.message);
+        // Résilience contre les faux échecs réseau (ex: ralentissement lors de l'envoi d'e-mails par Dolibarr)
+        const sub = String(args.subject).replace(/'/g, '');
+        const existing = await api.get<Array<Record<string, unknown>>>('/tickets', {
+          sqlfilters: `(t.subject:like:'%${sub}%')`,
+          limit: 1,
+          sortfield: 't.rowid',
+          sortorder: 'DESC',
+        }).catch(() => null);
+
+        if (Array.isArray(existing) && existing.length > 0 && existing[0].id) {
+          id = Number(existing[0].id);
+          networkRetryRecovered = true;
+          console.log(`[create_ticket] Ticket retrouvé avec succès en base Dolibarr (ID #${id})`);
+        } else {
+          throw err;
+        }
+      }
+
       const created = await api.get<Record<string, unknown>>(`/tickets/${id}`).catch(() => null);
+
       return JSON.stringify({
         applied: true,
         verified: !!created,
-        id,
+        network_retry_recovered: networkRetryRecovered,
+        id: Number(id),
         ref: created?.ref,
+        track_id: created?.track_id,
         subject: created?.subject || args.subject,
         ticket: created || { id, ...payload },
       }, null, 2);
     }
     case 'add_ticket_message': {
-      await api.post(`/tickets/${args.id}/messages`, { message: args.message, private_message: args.private_message || 0 });
-      const ticket = await api.get<Record<string, unknown>>(`/tickets/${args.id}`).catch(() => null);
+      const ticketIdOrRef = args.id;
+      let ticket: Record<string, unknown> | null = null;
+
+      // 1. Recherche du ticket par ID numérique ou référence (ex: 'TS2610-0002')
+      if (typeof ticketIdOrRef === 'number' || /^\d+$/.test(String(ticketIdOrRef))) {
+        ticket = await api.get<Record<string, unknown>>(`/tickets/${ticketIdOrRef}`).catch(() => null);
+      }
+      if (!ticket) {
+        const found = await api.get<Array<Record<string, unknown>>>('/tickets', {
+          sqlfilters: `(t.ref:like:'%${String(ticketIdOrRef).trim()}%')`,
+          limit: 1,
+        }).catch(() => null);
+        if (Array.isArray(found) && found.length > 0) {
+          ticket = found[0];
+        }
+      }
+
+      if (!ticket) {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: `Ticket '${ticketIdOrRef}' introuvable dans Dolibarr.`,
+        }, null, 2);
+      }
+
+      const trackId = (ticket.track_id as string) || (args.track_id as string);
+      if (!trackId) {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: `Impossible d'ajouter le message : track_id introuvable pour le ticket #${ticket.id} (${ticket.ref}).`,
+        }, null, 2);
+      }
+
+      // 2. Appel de la route Dolibarr officielle : POST /tickets/newmessage
+      const route = '/tickets/newmessage';
+      const msgPayload = {
+        track_id: trackId,
+        message: args.message,
+        private_message: args.private_message || 0,
+      };
+
+      await api.post(route, msgPayload);
+
+      // 3. Relecture du ticket après ajout
+      const updatedTicket = await api.get<Record<string, unknown>>(`/tickets/${ticket.id}`).catch(() => ticket);
+
       return JSON.stringify({
         applied: true,
-        verified: !!ticket,
-        ticket_id: args.id,
-        message: `Message ajouté au ticket #${args.id}.`,
+        verified: !!updatedTicket,
+        route_used: `POST ${route}`,
+        ticket_id: Number(ticket.id),
+        ref: updatedTicket?.ref || ticket.ref,
+        track_id: trackId,
+        message: `Message ajouté avec succès au ticket ${ticket.ref} (ID #${ticket.id}).`,
       }, null, 2);
     }
     case 'close_ticket': {

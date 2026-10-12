@@ -1,5 +1,21 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
+export class DolibarrAPIError extends Error {
+  public status?: number;
+  public route?: string;
+  public method?: string;
+  public dolibarrData?: unknown;
+
+  constructor(message: string, status?: number, route?: string, method?: string, dolibarrData?: unknown) {
+    super(message);
+    this.name = 'DolibarrAPIError';
+    this.status = status;
+    this.route = route;
+    this.method = method;
+    this.dolibarrData = dolibarrData;
+  }
+}
+
 export class DolibarrAPI {
   private client: AxiosInstance;
   public baseURL: string;
@@ -30,20 +46,36 @@ export class DolibarrAPI {
         if (error.response) {
           const status = error.response.status;
           const data = error.response.data;
+          const method = error.config?.method?.toUpperCase() || 'REQUEST';
+          const url = error.config?.url || '';
           const message = data?.error?.message || data?.message || data?.error || error.message;
-          
+
           let context = '';
           if (status === 401) context = ' (Clé API invalide ou permissions insuffisantes)';
           if (status === 403) context = ' (Accès non autorisé à cette ressource)';
           if (status === 404) context = ' (Ressource introuvable - vérifiez que le module est activé dans Dolibarr)';
           if (status === 500) context = ' (Erreur interne Dolibarr - vérifiez les logs)';
-          
-          throw new Error(`Dolibarr API Error [${status}]${context}: ${message}`);
+
+          const bodyDetail = typeof data === 'object' && data !== null ? ` | Corps: ${JSON.stringify(data)}` : '';
+          console.error(`[DolibarrAPI] Erreur ${status} sur ${method} ${url}:`, data);
+
+          throw new DolibarrAPIError(
+            `Dolibarr API Error [${status}] on ${method} ${url}${context}: ${message}${bodyDetail}`,
+            status,
+            url,
+            method,
+            data
+          );
         }
         if (error.request) {
-          throw new Error(`Dolibarr: Pas de réponse du serveur. Vérifiez que l'URL ${this.baseURL} est accessible.`);
+          throw new DolibarrAPIError(
+            `Dolibarr: Pas de réponse du serveur sur ${error.config?.method?.toUpperCase() || ''} ${error.config?.url || ''}. Vérifiez que l'URL ${this.baseURL} est accessible.`,
+            undefined,
+            error.config?.url,
+            error.config?.method?.toUpperCase()
+          );
         }
-        throw new Error(`Dolibarr Request Error: ${error.message}`);
+        throw new DolibarrAPIError(`Dolibarr Request Error: ${error.message}`);
       }
     );
   }

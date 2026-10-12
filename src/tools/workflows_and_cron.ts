@@ -363,14 +363,20 @@ export async function handleWorkflowAndCronTool(
       let statusEligible = false;
       let expectedAction = "";
 
+      let alreadyBilled = false;
       if (code.includes('PROPAL')) {
         typeCompatible = tType.toLowerCase().includes('propal') || tType.toLowerCase().includes('proposal') || tType.toLowerCase().includes('devis');
         statusEligible = status === 1 || status === 2;
         expectedAction = `Création d'une commande client liée à la proposition ${ref} (${totalTtc} FCFA TTC, ${linesCount} lignes)`;
-      } else if (code.includes('ORDER') && code.includes('INVOICE')) {
+      } else if (code.includes('ORDER') && (code.includes('INVOICE') || code.includes('BILLED'))) {
         typeCompatible = tType.toLowerCase().includes('order') || tType.toLowerCase().includes('commande');
-        statusEligible = status >= 1;
-        expectedAction = `Création d'une facture client liée à la commande ${ref} (${totalTtc} FCFA TTC)`;
+        alreadyBilled = Number(targetObj.billed) === 1;
+        statusEligible = status >= 1 && !alreadyBilled;
+        if (alreadyBilled) {
+          expectedAction = `Création de facture bloquée : la commande ${ref} est déjà classée facturée (billed=1), doublon empêché.`;
+        } else {
+          expectedAction = `Création d'une facture client liée à la commande ${ref} (${totalTtc} FCFA TTC)`;
+        }
       } else {
         typeCompatible = true;
         statusEligible = status >= 1;
@@ -389,6 +395,15 @@ export async function handleWorkflowAndCronTool(
         actuel: `Statut ${status}`,
         valide: statusEligible,
       });
+
+      if (code.includes('ORDER') && (code.includes('INVOICE') || code.includes('BILLED'))) {
+        conditions.push({
+          condition: "Absence de facturation préexistante (Anti-doublon workflow)",
+          requis: "Commande non facturée (billed=0)",
+          actuel: alreadyBilled ? "Commande déjà classée facturée (billed=1)" : "Commande non facturée (billed=0)",
+          valide: !alreadyBilled,
+        });
+      }
 
       const allMet = conditions.every(c => c.valide);
       const testHash = createHash('sha256').update(`${code}:${tType}:${tId}:${ref}:${Date.now()}`).digest('hex').substring(0, 16);
@@ -471,12 +486,21 @@ export async function handleWorkflowAndCronTool(
           description: `Création du lien parent-enfant dans llx_element_element (propal #${tId} -> order)`,
           impact: `Traçabilité commerciale conservée dans la fiche proposition et commande`,
         });
-      } else if (code.includes('ORDER') && code.includes('INVOICE')) {
-        predictedActions.push({
-          type: 'CREATE_INVOICE',
-          description: `Génération automatique d'une facture client liée à la commande ${ref}`,
-          impact: `Création facture client pour tiers #${socid}, montant: ${totalTtc} FCFA TTC`,
-        });
+      } else if (code.includes('ORDER') && (code.includes('INVOICE') || code.includes('BILLED'))) {
+        const isBilled = Number(targetObj.billed) === 1;
+        if (isBilled) {
+          predictedActions.push({
+            type: 'PREVENT_DUPLICATE_INVOICE',
+            description: `Interception du workflow pour la commande ${ref} : commande déjà facturée (billed=1)`,
+            impact: `Création de facture en double automatiquement empêchée`,
+          });
+        } else {
+          predictedActions.push({
+            type: 'CREATE_INVOICE',
+            description: `Génération automatique d'une facture client liée à la commande ${ref}`,
+            impact: `Création facture client pour tiers #${socid}, montant: ${totalTtc} FCFA TTC`,
+          });
+        }
       } else {
         predictedActions.push({
           type: 'EXECUTE_RULE',

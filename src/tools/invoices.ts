@@ -165,6 +165,47 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'create_invoice': {
+      // 1. Anti-doublon / Protection workflow classification : vérifier si la commande source est déjà facturée
+      if (args.origin_id || args.origin) {
+        const originId = Number(args.origin_id || args.origin);
+        const originType = String(args.origin_type || 'commande').toLowerCase();
+        if (originType.includes('commande') || originType.includes('order')) {
+          const order = await api.get<Record<string, unknown>>(`/orders/${originId}`).catch(() => null);
+          if (order && (order.billed === 1 || order.billed === '1')) {
+            return JSON.stringify({
+              applied: false,
+              verified: true,
+              duplicate_prevented: true,
+              error: `Création de facture en double empêchée : la commande #${originId} (${order.ref}) est déjà classée facturée (statut billed=1).`,
+              order_id: originId,
+              order_ref: order.ref,
+              order_billed: order.billed,
+            }, null, 2);
+          }
+        }
+      }
+
+      // 2. Anti-doublon par ref_client si spécifiée pour le même tiers
+      if (args.ref_client && args.socid) {
+        const existingByRef = await api.get<Array<Record<string, unknown>>>('/invoices', {
+          thirdparty_ids: args.socid,
+          sqlfilters: `(t.ref_client:like:'${String(args.ref_client).replace(/'/g, '')}')`,
+          limit: 1,
+        }).catch(() => null);
+
+        if (Array.isArray(existingByRef) && existingByRef.length > 0) {
+          const dup = existingByRef[0];
+          return JSON.stringify({
+            applied: false,
+            verified: true,
+            duplicate_prevented: true,
+            error: `Création de facture en double empêchée : une facture avec la référence client '${args.ref_client}' existe déjà pour ce tiers (Facture ${dup.ref}, ID #${dup.id}).`,
+            existing_invoice_id: dup.id,
+            existing_invoice_ref: dup.ref,
+          }, null, 2);
+        }
+      }
+
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const payload = { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 };
       delete (payload as Record<string, unknown>).date;
