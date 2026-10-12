@@ -105,7 +105,7 @@ export function createServer(): Server {
   const DOLIBARR_API_KEY = process.env.DOLIBARR_API_KEY;
   if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
   const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
-  const server = new Server({ name: "mcp-dolibarr", version: "5.2.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "mcp-dolibarr", version: "5.3.0" }, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args } = req.params;

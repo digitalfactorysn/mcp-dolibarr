@@ -167,30 +167,73 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const payload = { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 };
       delete (payload as Record<string, unknown>).date;
-      const id = await api.post('/invoices', payload);
-      return `✅ Facture brouillon créée avec succès.\nID facture: ${id}\nTiers ID: ${args.socid}\nProchaine étape: Ajoutez des lignes avec 'add_invoice_line', puis validez avec 'validate_invoice'.`;
+      const id = await api.post<number>('/invoices', payload);
+      const created = await api.get<Record<string, unknown>>(`/invoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || `(ID #${id})`,
+        statut: created?.statut,
+        socid: args.socid,
+        invoice: created || { id, ...payload },
+      }, null, 2);
     }
     case 'add_invoice_line': {
       const { id, ...line } = args;
       if (!line.product_type) line.product_type = 1; // Service par défaut
       const lineId = await api.post(`/invoices/${id}/lines`, line);
-      return `✅ Ligne ajoutée à la facture #${id}. ID ligne: ${lineId}`;
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id: id,
+        line_id: lineId,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+        lines_count: Array.isArray(invoice?.lines) ? invoice.lines.length : undefined,
+      }, null, 2);
     }
     case 'update_invoice_line': {
       const { invoice_id, line_id, ...line } = args;
       await api.put(`/invoices/${invoice_id}/lines/${line_id}`, line);
-      return `✅ Ligne #${line_id} de la facture #${invoice_id} mise à jour.`;
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${invoice_id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id,
+        line_id,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+      }, null, 2);
     }
     case 'delete_invoice_line': {
       await api.delete(`/invoices/${args.invoice_id}/lines/${args.line_id}`);
-      return `✅ Ligne #${args.line_id} supprimée de la facture #${args.invoice_id}.`;
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${args.invoice_id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id: args.invoice_id,
+        deleted_line_id: args.line_id,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+      }, null, 2);
     }
     case 'validate_invoice': {
       await api.post(`/invoices/${args.id}/validate`, {
         idwarehouse: args.idwarehouse || 0,
         notrigger: 0,
       });
-      return `✅ Facture #${args.id} validée avec succès. Elle est maintenant officielle et envoyable au client.`;
+      const validated = await api.get<Record<string, unknown>>(`/invoices/${args.id}`).catch(() => null);
+      const isOk = validated && (String(validated.statut) === '1' || String(validated.statut) === '2');
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: validated?.ref,
+        statut: validated?.statut,
+        message: isOk ? `Facture #${validated?.ref || args.id} validée et vérifiée.` : `Validation soumise pour la facture #${args.id}.`,
+      }, null, 2);
     }
     case 'send_invoice_email': {
       const payload = {
@@ -200,7 +243,12 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
         attach_pdf: 1,
       };
       await api.post(`/invoices/${args.id}/sendbyemail`, payload);
-      return `✅ Facture #${args.id} envoyée par email à ${args.sendto}.`;
+      return JSON.stringify({
+        applied: true,
+        invoice_id: args.id,
+        recipient: args.sendto,
+        message: `Facture #${args.id} envoyée par email à ${args.sendto}.`,
+      }, null, 2);
     }
     case 'add_payment_to_invoice': {
       const payDate = args.datepaye ? Math.floor(new Date(args.datepaye as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
@@ -215,7 +263,16 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
         amounts: { [args.id as string]: amount },
       };
       const paymentId = await api.post('/invoices/paymentsdistributed', payload);
-      return `✅ Paiement de ${amount} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
+      const reread = await api.get<Record<string, unknown>>(`/invoices/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        payment_id: paymentId,
+        invoice_id: args.id,
+        amount_paid: amount,
+        remaintopay: reread?.remaintopay,
+        paye: reread?.paye,
+      }, null, 2);
     }
     case 'create_credit_note': {
       const sourceInvoice = await api.get<Record<string, unknown>>(`/invoices/${args.source_invoice_id}`);
@@ -225,8 +282,16 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
         fac_rec: args.source_invoice_id,
         note_public: args.description || `Avoir sur facture #${args.source_invoice_id}`,
       };
-      const id = await api.post('/invoices', payload);
-      return `✅ Avoir (facture de crédit) créé. ID: ${id}. Associé à la facture source #${args.source_invoice_id}.`;
+      const id = await api.post<number>('/invoices', payload);
+      const created = await api.get<Record<string, unknown>>(`/invoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        credit_note_id: id,
+        ref: created?.ref,
+        source_invoice_id: args.source_invoice_id,
+        details: created,
+      }, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

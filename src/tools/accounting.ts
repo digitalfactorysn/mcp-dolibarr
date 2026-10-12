@@ -27,7 +27,7 @@ export const accountingTools: Tool[] = [
   },
   {
     name: 'add_bank_transaction',
-    description: "Ajouter une opération bancaire manuelle (entrée ou sortie de trésorerie)",
+    description: "Ajouter une opération bancaire manuelle (entrée ou sortie de trésorerie) avec vérification immédiate par relecture.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -43,21 +43,94 @@ export const accountingTools: Tool[] = [
   },
   {
     name: 'list_accounting_accounts',
-    description: 'Lister les comptes du plan comptable (nécessite module Comptabilité Avancée)',
+    description: 'Lister les comptes réels du plan comptable actif (SYSCOHADA-SN) avec recherche et pagination',
     inputSchema: {
       type: 'object',
       properties: {
-        type: { type: 'string', description: "Filtrer par type: 'CUST', 'SUPPLIER', 'BANK', 'FISC'" },
-        limit: { type: 'number' },
+        search_account: { type: 'string', description: "Filtrer par préfixe ou numéro de compte (ex: '411', '521', '706')" },
+        search_label: { type: 'string', description: "Filtrer par libellé de compte (ex: 'Client', 'Banque')" },
+        limit: { type: 'number', description: 'Nombre max de comptes à retourner (défaut: 100)' },
+        page: { type: 'number', description: 'Numéro de page pour pagination (défaut: 0)' },
+        active: { type: 'number', description: '1=Actifs (défaut), 0=Inactifs, -1=Tous' },
       },
     },
   },
   {
-    name: 'list_accounting_journals',
-    description: 'Lister les journaux comptables (Ventes, Achats, Banque, OD...)',
+    name: 'get_accounting_account',
+    description: "Obtenir les détails complets d'un compte comptable par son ID",
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        id: { type: 'number', description: 'ID du compte comptable' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_accounting_account',
+    description: 'Créer un nouveau compte dans le plan comptable SYSCOHADA avec vérification par relecture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        account_number: { type: 'string', description: "Numéro de compte (ex: '4111001', '521101')" },
+        label: { type: 'string', description: "Libellé du compte (ex: 'Client VIP Dakar')" },
+        pcg_version: { type: 'string', description: "Version du plan (défaut: 'SYSCOHADA-SN')" },
+        active: { type: 'number', description: '1=Actif (défaut), 0=Inactif' },
+      },
+      required: ['account_number', 'label'],
+    },
+  },
+  {
+    name: 'update_accounting_account',
+    description: 'Mettre à jour un compte comptable existant avec vérification par relecture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du compte comptable' },
+        account_number: { type: 'string', description: 'Nouveau numéro de compte' },
+        label: { type: 'string', description: 'Nouveau libellé du compte' },
+        active: { type: 'number', description: 'Statut actif (1 ou 0)' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_accounting_journals',
+    description: 'Lister les journaux comptables réels configurés dans Dolibarr (Ventes, Achats, Banque, OD, Frais, etc.)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        active: { type: 'number', description: '1=Actifs (défaut), 0=Inactifs, -1=Tous' },
+      },
+    },
+  },
+  {
+    name: 'create_accounting_journal',
+    description: 'Créer un nouveau journal comptable dans Dolibarr avec vérification par relecture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: "Code court du journal (ex: 'BQ2', 'PAY', 'OD2')" },
+        label: { type: 'string', description: "Libellé complet du journal" },
+        nature: { type: 'number', description: 'Nature: 1=OD, 2=Ventes, 3=Achats, 4=Banque, 5=Notes de frais, 8=Inventaire, 9=A-nouveaux' },
+        active: { type: 'number', description: '1=Actif (défaut), 0=Inactif' },
+      },
+      required: ['code', 'label'],
+    },
+  },
+  {
+    name: 'update_accounting_journal',
+    description: 'Mettre à jour un journal comptable existant avec vérification par relecture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du journal comptable' },
+        code: { type: 'string', description: 'Nouveau code' },
+        label: { type: 'string', description: 'Nouveau libellé' },
+        nature: { type: 'number', description: 'Nouvelle nature' },
+        active: { type: 'number', description: 'Statut actif (1 ou 0)' },
+      },
+      required: ['id'],
     },
   },
   {
@@ -94,12 +167,14 @@ export async function handleAccountingTool(name: string, args: Record<string, un
       const data = await api.get('/bankaccounts', params);
       return JSON.stringify(data, null, 2);
     }
+
     case 'get_bank_transactions': {
       const params: Record<string, unknown> = { limit: args.limit || 50 };
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get(`/bankaccounts/${args.account_id}/lines`, params);
       return JSON.stringify(data, null, 2);
     }
+
     case 'add_bank_transaction': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const payload = {
@@ -109,15 +184,33 @@ export async function handleAccountingTool(name: string, args: Record<string, un
         num_chq: args.num_chq || '',
         type: args.fk_type || 'VIR',
       };
-      const lineId = await api.post(`/bankaccounts/${args.account_id}/lines`, payload);
-      return `✅ Opération bancaire enregistrée. ID transaction: ${lineId}
-Compte: #${args.account_id} | Montant: ${args.amount}`;
+      const lineId = await api.post<number>(`/bankaccounts/${args.account_id}/lines`, payload);
+
+      // Relecture factuelle de vérification
+      const reread = await api.get<Record<string, unknown>>(`/bankaccounts/lines/${lineId}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        account_id: args.account_id,
+        line_id: lineId,
+        amount: args.amount,
+        label: args.label,
+        transaction: reread || { id: lineId, ...payload },
+      }, null, 2);
     }
+
     case 'list_accounting_accounts': {
       try {
-        const params: Record<string, unknown> = { limit: args.limit || 200 };
-        if (args.type) params.type = args.type;
-        const data = await api.get('/accountancy/account', params);
+        const params: Record<string, unknown> = {
+          limit: Number(args.limit) || 100,
+          page: Number(args.page) || 0,
+        };
+        if (args.search_account) params.search_account = String(args.search_account).trim();
+        if (args.search_label) params.search_label = String(args.search_label).trim();
+        if (args.active !== undefined) params.active = args.active;
+
+        const data = await api.get<unknown[]>('/accountancy/accounts', params).catch(() => api.get<unknown[]>('/accountancy/account', params));
         return JSON.stringify(data, null, 2);
       } catch (err) {
         return JSON.stringify({
@@ -130,9 +223,54 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         }, null, 2);
       }
     }
+
+    case 'get_accounting_account': {
+      const id = Number(args.id);
+      const data = await api.get(`/accountancy/accounts/${id}`);
+      return JSON.stringify(data, null, 2);
+    }
+
+    case 'create_accounting_account': {
+      const payload = {
+        account_number: String(args.account_number).trim(),
+        label: String(args.label).trim(),
+        pcg_version: args.pcg_version ? String(args.pcg_version).trim() : 'SYSCOHADA-SN',
+        active: args.active !== undefined ? Number(args.active) : 1,
+      };
+      const id = await api.post<number>('/accountancy/accounts', payload);
+      const reread = await api.get<Record<string, unknown>>(`/accountancy/accounts/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        id,
+        account: reread || { id, ...payload },
+      }, null, 2);
+    }
+
+    case 'update_accounting_account': {
+      const id = Number(args.id);
+      const payload: Record<string, unknown> = {};
+      if (args.account_number) payload.account_number = String(args.account_number).trim();
+      if (args.label) payload.label = String(args.label).trim();
+      if (args.active !== undefined) payload.active = Number(args.active);
+
+      await api.put(`/accountancy/accounts/${id}`, payload);
+      const reread = await api.get<Record<string, unknown>>(`/accountancy/accounts/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        id,
+        account: reread || { id, ...payload },
+      }, null, 2);
+    }
+
     case 'list_accounting_journals': {
       try {
-        const data = await api.get('/accountancy/journal');
+        const params: Record<string, unknown> = {};
+        if (args.active !== undefined) params.active = args.active;
+        const data = await api.get('/accountancy/journals', params).catch(() => api.get('/accountancy/journal', params));
         return JSON.stringify(data, null, 2);
       } catch (err) {
         return JSON.stringify({
@@ -145,6 +283,44 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         }, null, 2);
       }
     }
+
+    case 'create_accounting_journal': {
+      const payload = {
+        code: String(args.code).trim().toUpperCase(),
+        label: String(args.label).trim(),
+        nature: args.nature !== undefined ? Number(args.nature) : 1,
+        active: args.active !== undefined ? Number(args.active) : 1,
+      };
+      const id = await api.post<number>('/accountancy/journals', payload);
+      const reread = await api.get<Record<string, unknown>>(`/accountancy/journals/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        id,
+        journal: reread || { id, ...payload },
+      }, null, 2);
+    }
+
+    case 'update_accounting_journal': {
+      const id = Number(args.id);
+      const payload: Record<string, unknown> = {};
+      if (args.code) payload.code = String(args.code).trim().toUpperCase();
+      if (args.label) payload.label = String(args.label).trim();
+      if (args.nature !== undefined) payload.nature = Number(args.nature);
+      if (args.active !== undefined) payload.active = Number(args.active);
+
+      await api.put(`/accountancy/journals/${id}`, payload);
+      const reread = await api.get<Record<string, unknown>>(`/accountancy/journals/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        id,
+        journal: reread || { id, ...payload },
+      }, null, 2);
+    }
+
     case 'list_accounting_entries': {
       try {
         const params: Record<string, unknown> = { limit: args.limit || 100 };
@@ -160,14 +336,14 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
           endpoint: '/accountancy/bookkeeping',
           message: "L'endpoint REST pour le grand livre comptable n'est pas exposé par cette version de Dolibarr.",
           details: err instanceof Error ? err.message : String(err),
-          alternative: "Utiliser l'export comptable officiel ou l'accès web direct (Comptabilité → Grand Livre)."
+          alternative: "Utiliser l'export comptable officiel export_accounting_entries (FEC) ou la balance générale."
         }, null, 2);
       }
     }
+
     case 'get_financial_summary': {
       const year = Number(args.year) || new Date().getFullYear();
 
-      // Récupérer toutes les factures + comptes bancaires
       const [allInvoices, bankAccounts] = await Promise.all([
         api.get<unknown[]>('/invoices', { limit: 500 }),
         api.get<unknown[]>('/bankaccounts', { status: 1 }),
@@ -176,7 +352,6 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
       const allArr   = Array.isArray(allInvoices) ? allInvoices as Record<string, unknown>[] : [];
       const bankArr  = Array.isArray(bankAccounts) ? bankAccounts as Record<string, unknown>[] : [];
 
-      // Filtrer par année via le champ date (timestamp)
       const yearStart = Math.floor(new Date(`${year}-01-01`).getTime() / 1000);
       const yearEnd   = Math.floor(new Date(`${year}-12-31T23:59:59`).getTime() / 1000);
 
@@ -185,7 +360,6 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         return d >= yearStart && d <= yearEnd;
       });
 
-      // Séparation payées / impayées par champ paye
       const paidArr   = yearArr.filter(inv => String(inv.paye) === '1' || String(inv.statut) === '2');
       const unpaidArr = yearArr.filter(inv => String(inv.paye) === '0' && (String(inv.statut) === '1' || String(inv.statut) === '2'));
 
@@ -205,9 +379,8 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         nb_comptes_bancaires: bankArr.length,
       }, null, 2);
     }
+
     default:
       throw new Error(`Outil inconnu: ${name}`);
   }
 }
-
-

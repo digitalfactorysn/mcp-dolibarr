@@ -139,17 +139,28 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       return JSON.stringify(data, null, 2);
     }
     case 'create_thirdparty': {
-      const id = await api.post('/thirdparties', args);
-      return `✅ Tiers créé avec succès. ID: ${id}\nNom: ${args.name}`;
+      const id = await api.post<number>('/thirdparties', args);
+      const created = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        name: created?.name || args.name,
+        code_client: created?.code_client,
+        thirdparty: created || { id, ...args },
+      }, null, 2);
     }
     case 'update_thirdparty': {
       const { id, ...rest } = args;
-      try {
-        await api.put(`/thirdparties/${id}`, rest);
-        return `✅ Tiers #${id} mis à jour.`;
-      } catch (_e) {
-        return `⚠️ Note: L'API Dolibarr requiert tous les champs obligatoires pour la mise à jour. Utilisez l'interface web pour les modifications complexes, ou fournissez tous les champs du tiers (name, status, client, country_id...).`;
-      }
+      await api.put(`/thirdparties/${id}`, rest);
+      const updated = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!updated,
+        id,
+        name: updated?.name,
+        thirdparty: updated || { id, ...rest },
+      }, null, 2);
     }
     case 'get_thirdparty_invoices': {
       const data = await api.get('/invoices', { thirdparty_ids: args.id, limit: 200 });

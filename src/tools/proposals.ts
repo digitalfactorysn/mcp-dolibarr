@@ -116,29 +116,72 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       const fin_validite = args.fin_validite ? Math.floor(new Date(args.fin_validite as string).getTime() / 1000) : null;
       const payload = { ...args, date, fin_validite, user_author_id: Number(args.user_author_id) || 1 };
       delete (payload as Record<string, unknown>).fin_validite;
-      const id = await api.post('/proposals', payload);
-      return `✅ Devis créé avec succès. ID: ${id}\nProchaine étape: Ajoutez des lignes avec 'add_proposal_line', puis validez avec 'validate_proposal'.`;
+      const id = await api.post<number>('/proposals', payload);
+      const created = await api.get<Record<string, unknown>>(`/proposals/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || `(ID #${id})`,
+        statut: created?.statut,
+        socid: args.socid,
+        proposal: created || { id, ...payload },
+      }, null, 2);
     }
     case 'add_proposal_line': {
       const { id, ...line } = args;
       const lineId = await api.post(`/proposals/${id}/lines`, line);
-      return `✅ Ligne ajoutée au devis #${id}. ID ligne: ${lineId}`;
+      const proposal = await api.get<Record<string, unknown>>(`/proposals/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!proposal,
+        proposal_id: id,
+        line_id: lineId,
+        total_ht: proposal?.total_ht,
+        total_ttc: proposal?.total_ttc,
+        lines_count: Array.isArray(proposal?.lines) ? proposal.lines.length : undefined,
+      }, null, 2);
     }
     case 'validate_proposal': {
       const status = args.status || 1;
       await api.post(`/proposals/${args.id}/validate`, { status });
-      return `✅ Devis #${args.id} validé (statut: ${status === 2 ? 'Signé' : 'Envoyé'}).`;
+      const validated = await api.get<Record<string, unknown>>(`/proposals/${args.id}`).catch(() => null);
+      const isOk = validated && (Number(validated.statut) === Number(status));
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: validated?.ref,
+        statut: validated?.statut,
+        message: `Devis #${validated?.ref || args.id} validé (statut: ${status === 2 ? 'Signé' : 'Envoyé'}).`,
+      }, null, 2);
     }
     case 'close_proposal': {
       const status = args.status || 3;
       await api.post(`/proposals/${args.id}/close`, { status, note: args.note || '' });
-      return `✅ Devis #${args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`;
+      const closed = await api.get<Record<string, unknown>>(`/proposals/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!closed,
+        id: args.id,
+        ref: closed?.ref,
+        statut: closed?.statut,
+        message: `Devis #${closed?.ref || args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`,
+      }, null, 2);
     }
     case 'convert_proposal_to_order': {
-      const data = await api.post(`/proposals/${args.id}/close`, { status: 2 });
-      // Then create order from proposal
-      const orderId = await api.post('/orders', { origin: 'propal', origin_id: args.id });
-      return `✅ Devis #${args.id} converti en commande client. ID commande: ${orderId}`;
+      await api.post(`/proposals/${args.id}/close`, { status: 2 });
+      const orderId = await api.post<number>('/orders', { origin: 'propal', origin_id: args.id });
+      const order = await api.get<Record<string, unknown>>(`/orders/${orderId}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!order,
+        proposal_id: args.id,
+        order_id: orderId,
+        order_ref: order?.ref,
+        total_ttc: order?.total_ttc,
+        details: order,
+      }, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

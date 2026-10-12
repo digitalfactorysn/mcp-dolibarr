@@ -159,21 +159,57 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     case 'create_order': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const payload = { ...args, date, user_author_id: Number(args.user_author_id) || 1 };
-      const id = await api.post('/orders', payload);
-      return `✅ Commande client créée. ID: ${id}`;
+      const id = await api.post<number>('/orders', payload);
+      const created = await api.get<Record<string, unknown>>(`/orders/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || `(ID #${id})`,
+        statut: created?.statut,
+        socid: args.socid,
+        order: created || { id, ...payload },
+      }, null, 2);
     }
     case 'add_order_line': {
       const { id, ...line } = args;
       const lineId = await api.post(`/orders/${id}/lines`, line);
-      return `✅ Ligne ajoutée à la commande #${id}. ID ligne: ${lineId}`;
+      const order = await api.get<Record<string, unknown>>(`/orders/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!order,
+        order_id: id,
+        line_id: lineId,
+        total_ht: order?.total_ht,
+        total_ttc: order?.total_ttc,
+        lines_count: Array.isArray(order?.lines) ? order.lines.length : undefined,
+      }, null, 2);
     }
     case 'validate_order': {
       await api.post(`/orders/${args.id}/validate`, { idwarehouse: 0 });
-      return `✅ Commande #${args.id} validée.`;
+      const validated = await api.get<Record<string, unknown>>(`/orders/${args.id}`).catch(() => null);
+      const isOk = validated && (String(validated.statut) === '1' || String(validated.statut) === '2');
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: validated?.ref,
+        statut: validated?.statut,
+        message: isOk ? `Commande #${validated?.ref || args.id} validée et vérifiée.` : `Validation soumise pour la commande #${args.id}.`,
+      }, null, 2);
     }
     case 'convert_order_to_invoice': {
-      const invoiceId = await api.post(`/orders/${args.id}/invoice`, {});
-      return `✅ Commande #${args.id} facturée. ID facture générée: ${invoiceId}`;
+      const invoiceId = await api.post<number>(`/orders/${args.id}/invoice`, {});
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${invoiceId}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        order_id: args.id,
+        invoice_id: invoiceId,
+        invoice_ref: invoice?.ref,
+        total_ttc: invoice?.total_ttc,
+        details: invoice,
+      }, null, 2);
     }
     // Supplier orders
     case 'get_supplier_order': {
@@ -188,17 +224,40 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     }
     case 'create_supplier_order': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/supplierorders', { ...args, date, user_author_id: Number(args.user_author_id) || 1 });
-      return `✅ Commande fournisseur créée. ID: ${id}`;
+      const id = await api.post<number>('/supplierorders', { ...args, date, user_author_id: Number(args.user_author_id) || 1 });
+      const created = await api.get<Record<string, unknown>>(`/supplierorders/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref,
+        socid: args.socid,
+        order: created,
+      }, null, 2);
     }
     case 'add_supplier_order_line': {
       const { id, ...line } = args;
       const lineId = await api.post(`/supplierorders/${id}/lines`, line);
-      return `✅ Ligne ajoutée à la commande fournisseur #${id}. ID ligne: ${lineId}`;
+      const order = await api.get<Record<string, unknown>>(`/supplierorders/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!order,
+        order_id: id,
+        line_id: lineId,
+        total_ht: order?.total_ht,
+        total_ttc: order?.total_ttc,
+      }, null, 2);
     }
     case 'validate_supplier_order': {
       await api.post(`/supplierorders/${args.id}/validate`, {});
-      return `✅ Commande fournisseur #${args.id} validée.`;
+      const validated = await api.get<Record<string, unknown>>(`/supplierorders/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!validated,
+        id: args.id,
+        ref: validated?.ref,
+        statut: validated?.statut,
+      }, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

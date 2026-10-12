@@ -42,17 +42,20 @@ export const setupTools: Tool[] = [
   },
   {
     name: 'get_setup_values',
-    description: "Lire les constantes de configuration globale de Dolibarr (paramètres de configuration)",
+    description: "Lire les constantes de configuration globale de Dolibarr avec filtrage par constante exacte, par module ou par mot-clé.",
     inputSchema: {
       type: 'object',
       properties: {
-        module: { type: 'string', description: "Filtrer par module (ex: 'FACTURE', 'SOCIETE', 'MAIN')" },
+        constant: { type: 'string', description: "Nom exact de la constante (ex: 'MAIN_MONNAIE', 'CHARTOFACCOUNTS'). Si renseigné, lecture unitaire directe." },
+        module: { type: 'string', description: "Filtrer par module (ex: 'FACTURE', 'SOCIETE', 'MAIN', 'ACCOUNTING')" },
+        search: { type: 'string', description: "Recherche par mot-clé dans les noms ou valeurs de constantes" },
+        limit: { type: 'number', description: "Nombre maximum de constantes à retourner (défaut: 50)" },
       },
     },
   },
   {
     name: 'set_setup_value',
-    description: "Modifier une constante de configuration globale de Dolibarr. ⚠️ Utiliser avec précaution.",
+    description: "Modifier une constante de configuration globale de Dolibarr avec relecture immédiate de vérification.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -115,7 +118,13 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
     }
     case 'update_company_info': {
       await api.put('/setup/company', args);
-      return '✅ Informations de la société mises à jour avec succès.';
+      const company = await api.get<Record<string, unknown>>('/setup/company').catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!company,
+        message: 'Informations de la société mises à jour avec succès.',
+        company: company || args,
+      }, null, 2);
     }
     case 'list_modules': {
       const params: Record<string, unknown> = {};
@@ -125,15 +134,79 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'get_setup_values': {
-      const params: Record<string, unknown> = { limit: 500 };
-      if (args.module) params.sqlfilters = `(t.name:like:'${args.module}%')`;
-      const data = await api.get('/setup/conf', params);
-      return JSON.stringify(data, null, 2);
+      // 1. Si une constante spécifique est demandée, utiliser l'endpoint unitaire
+      if (args.constant) {
+        const constName = String(args.constant).trim();
+        try {
+          const val = await api.get<unknown>(`/setup/conf/${constName}`);
+          return JSON.stringify({
+            constant: constName,
+            value: val,
+            found: true,
+          }, null, 2);
+        } catch {
+          return JSON.stringify({
+            constant: constName,
+            value: null,
+            found: false,
+          }, null, 2);
+        }
+      }
+
+      // 2. Sinon, lire l'ensemble des constantes globales et appliquer un filtrage côté client
+      const rawConf = await api.get<Record<string, unknown>>('/setup/conf');
+      const allEntries = Object.entries(rawConf || {});
+      const moduleFilter = args.module ? String(args.module).trim().toUpperCase() : '';
+      const searchFilter = args.search ? String(args.search).trim().toUpperCase() : '';
+      const limit = Number(args.limit) > 0 ? Number(args.limit) : 50;
+
+      const filtered = allEntries.filter(([k, v]) => {
+        const keyUpper = k.toUpperCase();
+        const valStr = String(v ?? '').toUpperCase();
+
+        if (moduleFilter && !keyUpper.startsWith(moduleFilter) && !keyUpper.includes(moduleFilter)) {
+          return false;
+        }
+        if (searchFilter && !keyUpper.includes(searchFilter) && !valStr.includes(searchFilter)) {
+          return false;
+        }
+        return true;
+      });
+
+      const sliced = filtered.slice(0, limit);
+      const resultObj: Record<string, unknown> = {};
+      sliced.forEach(([k, v]) => {
+        resultObj[k] = v;
+      });
+
+      return JSON.stringify({
+        total_matches: filtered.length,
+        returned_count: sliced.length,
+        filter_module: moduleFilter || undefined,
+        filter_search: searchFilter || undefined,
+        constants: resultObj,
+      }, null, 2);
     }
     case 'set_setup_value': {
-      const payload = { constname: args.constant, constvalue: args.value };
+      const constName = String(args.constant).trim();
+      const constVal = String(args.value);
+      const payload = { constname: constName, constvalue: constVal };
       await api.post('/setup/conf', payload);
-      return `✅ Constante '${args.constant}' définie à '${args.value}'.`;
+
+      // Relecture immédiate pour vérification
+      const reread = await api.get<unknown>(`/setup/conf/${constName}`).catch(() => null);
+      const isVerified = String(reread) === constVal;
+
+      return JSON.stringify({
+        applied: true,
+        verified: isVerified,
+        constant: constName,
+        value: constVal,
+        reread_value: reread,
+        message: isVerified
+          ? `Constante '${constName}' définie à '${constVal}' et confirmée par relecture.`
+          : `Constante '${constName}' mise à jour, valeur relue: '${reread}'.`,
+      }, null, 2);
     }
     case 'list_payment_methods': {
       const data = await api.get('/setup/dictionary/payment_types');
