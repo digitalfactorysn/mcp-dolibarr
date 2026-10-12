@@ -51,6 +51,18 @@ export const accountingTools: Tool[] = [
     },
   },
   {
+    name: 'archive_bank_account',
+    description: "Archiver ou fermer un compte bancaire dans Dolibarr avec protection absolue du compte principal de production #1 (ECOBANK)",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: "ID du compte bancaire à archiver (compte #1 interdit)" },
+        comment: { type: 'string', description: "Commentaire ou motif d'archivage" },
+      },
+      required: ['id'],
+    },
+  },
+  {
     name: 'list_accounting_accounts',
     description: 'Lister les comptes réels du plan comptable actif (SYSCOHADA-SN) avec recherche et pagination',
     inputSchema: {
@@ -240,17 +252,47 @@ export async function handleAccountingTool(name: string, args: Record<string, un
       const params: Record<string, unknown> = {};
       if (args.status !== undefined) params.status = args.status;
       else params.status = 1;
-      const data = await api.get('/bankaccounts', params);
+      const data = await api.get<Array<Record<string, unknown>>>('/bankaccounts', params);
+      if (Array.isArray(data)) {
+        await Promise.all(data.map(async (b) => {
+          try {
+            const lines = await api.get<Array<{ amount?: number | string }>>(`/bankaccounts/${b.id}/lines`, { limit: 10000 });
+            if (Array.isArray(lines)) {
+              const bal = Math.round(lines.reduce((acc, l) => acc + (Number(l.amount) || 0), 0) * 100) / 100;
+              b.balance = bal;
+              b.solde = bal;
+              b.transactions_count = lines.length;
+            }
+          } catch {
+            b.balance = 0;
+            b.solde = 0;
+          }
+        }));
+      }
       return JSON.stringify(data, null, 2);
     }
 
     case 'get_bank_account': {
-      const b = await api.get<Record<string, unknown>>(`/bankaccounts/${Number(args.id)}`);
+      const id = Number(args.id ?? args.account_id);
+      const b = await api.get<Record<string, unknown>>(`/bankaccounts/${id}`);
+      let calculatedBalance = 0;
+      let linesCount = 0;
+      try {
+        const lines = await api.get<Array<{ amount?: number | string }>>(`/bankaccounts/${id}/lines`, { limit: 10000 });
+        if (Array.isArray(lines)) {
+          linesCount = lines.length;
+          calculatedBalance = lines.reduce((acc, line) => acc + (Number(line.amount) || 0), 0);
+        }
+      } catch {
+        // Default to 0 if lines endpoint empty
+      }
+      const balanceRounded = Math.round(calculatedBalance * 100) / 100;
       return JSON.stringify({
         id: b.id, ref: b.ref, label: b.label, bank: b.bank, type: b.type, clos: b.clos,
         currency_code: b.currency_code, account_number: b.account_number,
         fk_accountancy_journal: b.fk_accountancy_journal, accountancy_journal: b.accountancy_journal,
-        balance: b.balance, production_protected: Number(b.id) === 1,
+        balance: balanceRounded, solde: balanceRounded, transactions_count: linesCount,
+        production_protected: Number(b.id) === 1,
       }, null, 2);
     }
 
@@ -283,6 +325,29 @@ export async function handleAccountingTool(name: string, args: Record<string, un
         amount: args.amount,
         label: args.label,
         transaction: reread || { id: lineId, ...payload },
+      }, null, 2);
+    }
+
+    case 'archive_bank_account': {
+      const id = Number(args.id ?? args.account_id);
+      if (id === 1) {
+        throw new Error("PROTECTION_ERROR: Le compte bancaire principal #1 (ECOBANK) est strictement protégé et ne peut être archivé ni modifié.");
+      }
+      const existing = await api.get<Record<string, unknown>>(`/bankaccounts/${id}`).catch(() => null);
+      if (!existing || !existing.id) {
+        throw new Error(`Compte bancaire #${id} introuvable.`);
+      }
+      await api.put(`/bankaccounts/${id}`, { status: 1, clos: 1 });
+      const reread = await api.get<Record<string, unknown>>(`/bankaccounts/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread && (String(reread.clos) === '1' || String(reread.status) === '1'),
+        id,
+        ref: reread?.ref || existing.ref,
+        label: reread?.label || existing.label,
+        clos: reread?.clos ?? 1,
+        status: reread?.status ?? 1,
+        message: `Compte bancaire #${id} archivé et fermé avec succès.`,
       }, null, 2);
     }
 

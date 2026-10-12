@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { maskPaymentUrls } from '../utils/security.js';
 
 export const proposalTools: Tool[] = [
   {
@@ -105,11 +106,11 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       if (args.status !== undefined) params.status = args.status;
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/proposals', params);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'get_proposal': {
       const data = await api.get(`/proposals/${args.id}`);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'create_proposal': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);

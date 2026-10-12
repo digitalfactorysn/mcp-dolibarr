@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { maskPaymentUrls } from '../utils/security.js';
 
 export const orderTools: Tool[] = [
   {
@@ -150,11 +151,11 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       if (args.status !== undefined) params.status = args.status;
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/orders', params);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'get_order': {
       const data = await api.get(`/orders/${args.id}`);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'create_order': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
@@ -214,13 +215,17 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
     // Supplier orders
     case 'get_supplier_order': {
       const data = await api.get(`/supplierorders/${args.id}`);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'list_supplier_orders': {
       const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
       if (args.status !== undefined) params.status = args.status;
-      const data = await api.get('/supplierorders', params);
-      return JSON.stringify(data, null, 2);
+      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
+      const data = await api.get<Array<Record<string, unknown>>>('/supplierorders', params);
+      const filtered = Array.isArray(data)
+        ? data.filter(o => o && o.id !== null && o.id !== undefined && o.ref !== null)
+        : [];
+      return JSON.stringify(maskPaymentUrls(filtered), null, 2);
     }
     case 'create_supplier_order': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);

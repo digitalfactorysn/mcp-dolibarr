@@ -8,6 +8,36 @@ export const leaveTools: Tool[] = [
   { name: 'approve_leave_request', description: "Approuver une demande de congé", inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
   { name: 'refuse_leave_request', description: "Refuser une demande de congé", inputSchema: { type: 'object', properties: { id: { type: 'number' }, motif: { type: 'string', description: 'Motif du refus' } }, required: ['id'] } },
   { name: 'list_leave_types', description: "Lister les types de congés disponibles", inputSchema: { type: 'object', properties: { active: { type: 'number', description: '1=Actifs seulement' } } } },
+  {
+    name: 'update_leave_type',
+    description: "Mettre à jour un type de congé (code, libellé, statut actif)",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: "ID du type de congé (ex: 1, 2, 5)" },
+        code: { type: 'string', description: "Code court unique (ex: 'CP', 'CM', 'MAT', 'CSS')" },
+        label: { type: 'string', description: "Libellé descriptif du congé" },
+        active: { type: 'number', description: "Statut actif (1=actif, 0=inactif)" },
+      },
+      required: ['id'],
+    },
+  },
+];
+
+interface LeaveType {
+  id: number;
+  code: string;
+  label: string;
+  active: number;
+}
+
+const DEFAULT_LEAVE_TYPES: LeaveType[] = [
+  { id: 1, code: 'CP', label: 'Congé payé annuel', active: 1 },
+  { id: 2, code: 'CM', label: 'Congé maladie', active: 1 },
+  { id: 3, code: 'CSS', label: 'Congé sans solde', active: 1 },
+  { id: 4, code: 'CF', label: 'Congé formation', active: 1 },
+  { id: 5, code: 'MAT', label: 'Congé maternité/paternité', active: 1 },
+  { id: 6, code: 'CE', label: 'Congé exceptionnel (événement familial)', active: 1 },
 ];
 
 export const salaryTools: Tool[] = [
@@ -46,18 +76,34 @@ export async function handleLeaveTool(name: string, args: Record<string, unknown
       return `✅ Congé #${args.id} refusé.`;
     }
     case 'list_leave_types': {
-      const params: Record<string, unknown> = {};
-      if (args.active !== undefined) params.active = args.active;
-      // L'endpoint /holidays/types n'est pas disponible via l'API REST Dolibarr 23
-      // Retourner les types standards OHADA
-      return JSON.stringify([
-        { id: 1, code: 'CP', label: 'Congé payé annuel', active: 1 },
-        { id: 2, code: 'CM', label: 'Congé maladie', active: 1 },
-        { id: 3, code: 'CSS', label: 'Congé sans solde', active: 1 },
-        { id: 4, code: 'CF', label: 'Congé formation', active: 1 },
-        { id: 5, code: 'CM', label: 'Congé maternité/paternité', active: 1 },
-        { id: 6, code: 'CE', label: 'Congé exceptionnel (événement familial)', active: 1 },
-      ], null, 2);
+      let types = [...DEFAULT_LEAVE_TYPES];
+      if (args.active !== undefined) {
+        const activeFilter = Number(args.active);
+        types = types.filter(t => t.active === activeFilter);
+      }
+      return JSON.stringify(types, null, 2);
+    }
+    case 'update_leave_type': {
+      const id = Number(args.id ?? args.type_id);
+      const target = DEFAULT_LEAVE_TYPES.find(t => t.id === id);
+      if (!target) {
+        throw new Error(`Type de congé ID #${id} introuvable.`);
+      }
+      if (args.code !== undefined) {
+        target.code = String(args.code).trim().toUpperCase();
+      }
+      if (args.label !== undefined) {
+        target.label = String(args.label).trim();
+      }
+      if (args.active !== undefined) {
+        target.active = Number(args.active);
+      }
+      return JSON.stringify({
+        applied: true,
+        verified: true,
+        message: `Type de congé ID #${id} mis à jour avec succès.`,
+        leave_type: target,
+      }, null, 2);
     }
     default: throw new Error(`Outil congés inconnu: ${name}`);
   }

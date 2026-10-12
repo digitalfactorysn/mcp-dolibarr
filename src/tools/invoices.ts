@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { maskPaymentUrls } from '../utils/security.js';
 
 export const invoiceTools: Tool[] = [
   {
@@ -157,11 +158,11 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       if (args.thirdparty_ids) params.thirdparty_ids = args.thirdparty_ids;
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/invoices', params);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'get_invoice': {
       const data = await api.get(`/invoices/${args.id}`);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'create_invoice': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);

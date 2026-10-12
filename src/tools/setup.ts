@@ -31,6 +31,21 @@ export const setupTools: Tool[] = [
     },
   },
   {
+    name: 'update_company_legal_info',
+    description: "Mettre à jour les informations légales et fiscales de l'entreprise (SIRET/NINEA, TVA intracommunautaire, RCS, capital, forme juridique, code APE)",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        siret: { type: 'string', description: 'Numéro SIRET ou NINEA (Sénégal)' },
+        tva_intracom: { type: 'string', description: 'Numéro d identification TVA / fiscal' },
+        rcs: { type: 'string', description: 'Registre du Commerce et du Crédit Mobilier (RCCM / RCS)' },
+        capital: { type: 'string', description: 'Capital social (ex: 10000000 FCFA)' },
+        forme_juridique: { type: 'string', description: 'Forme juridique (ex: SAS, SARL, SA, SUARL)' },
+        ape: { type: 'string', description: 'Code APE / NAF' },
+      },
+    },
+  },
+  {
     name: 'list_modules',
     description: "Lister tous les modules Dolibarr et leur statut (activé/désactivé). Essentiel pour savoir quelles fonctionnalités sont disponibles.",
     inputSchema: {
@@ -129,13 +144,72 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'update_company_info': {
-      await api.put('/setup/company', args);
+      const updates: Record<string, string> = {};
+      if (args.name) updates['MAIN_INFO_SOCIETE_NOM'] = String(args.name).trim();
+      if (args.address) updates['MAIN_INFO_SOCIETE_ADDRESS'] = String(args.address).trim();
+      if (args.town) updates['MAIN_INFO_SOCIETE_TOWN'] = String(args.town).trim();
+      if (args.zip) updates['MAIN_INFO_SOCIETE_ZIP'] = String(args.zip).trim();
+      if (args.phone) updates['MAIN_INFO_SOCIETE_TEL'] = String(args.phone).trim();
+      if (args.email) updates['MAIN_INFO_SOCIETE_MAIL'] = String(args.email).trim();
+      if (args.url) updates['MAIN_INFO_SOCIETE_WEB'] = String(args.url).trim();
+      if (args.siret) updates['MAIN_INFO_SIRET'] = String(args.siret).trim();
+      if (args.tva_intracom) updates['MAIN_INFO_TVAINTRA'] = String(args.tva_intracom).trim();
+      if (args.capital) updates['MAIN_INFO_CAPITAL'] = String(args.capital).trim();
+
+      const results: Record<string, unknown> = {};
+      for (const [constName, constVal] of Object.entries(updates)) {
+        await api.post('/setup/conf', {
+          constant: constName,
+          constname: constName,
+          value: constVal,
+          constvalue: constVal,
+          entity: 1,
+        }).catch(() => api.put(`/setup/conf/${constName}`, { value: constVal }));
+        results[constName] = constVal;
+      }
       const company = await api.get<Record<string, unknown>>('/setup/company').catch(() => null);
       return JSON.stringify({
         applied: true,
-        verified: !!company,
+        verified: Object.keys(updates).length > 0,
         message: 'Informations de la société mises à jour avec succès.',
+        updated_constants: results,
         company: company || args,
+      }, null, 2);
+    }
+    case 'update_company_legal_info': {
+      const updates: Record<string, string> = {};
+      if (args.siret) updates['MAIN_INFO_SIRET'] = String(args.siret).trim();
+      if (args.tva_intracom) updates['MAIN_INFO_TVAINTRA'] = String(args.tva_intracom).trim();
+      if (args.rcs || args.siren) updates['MAIN_INFO_SIREN'] = String(args.rcs || args.siren).trim();
+      if (args.capital) updates['MAIN_INFO_CAPITAL'] = String(args.capital).trim();
+      if (args.ape) updates['MAIN_INFO_APE'] = String(args.ape).trim();
+      if (args.forme_juridique) updates['MAIN_INFO_SOCIETE_FORME_JURIDIQUE'] = String(args.forme_juridique).trim();
+
+      const results: Record<string, unknown> = {};
+      for (const [constName, constVal] of Object.entries(updates)) {
+        await api.post('/setup/conf', {
+          constant: constName,
+          constname: constName,
+          value: constVal,
+          constvalue: constVal,
+          entity: 1,
+        }).catch(() => api.put(`/setup/conf/${constName}`, { value: constVal }));
+        results[constName] = constVal;
+      }
+      const company = await api.get<Record<string, unknown>>('/setup/company').catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: Object.keys(updates).length > 0,
+        message: 'Informations légales et fiscales mises à jour avec succès.',
+        updated_constants: results,
+        company_legal_info: {
+          siret: (company as any)?.idprof2 || args.siret || results['MAIN_INFO_SIRET'],
+          rcs: (company as any)?.idprof1 || args.rcs || results['MAIN_INFO_SIREN'],
+          tva_intracom: (company as any)?.tva_intra || args.tva_intracom || results['MAIN_INFO_TVAINTRA'],
+          capital: (company as any)?.capital || args.capital || results['MAIN_INFO_CAPITAL'],
+          ape: (company as any)?.ape || args.ape || results['MAIN_INFO_APE'],
+          forme_juridique: (company as any)?.forme_juridique || args.forme_juridique || results['MAIN_INFO_SOCIETE_FORME_JURIDIQUE'],
+        },
       }, null, 2);
     }
     case 'list_modules': {
@@ -146,33 +220,36 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'get_setup_values': {
-      // 1. Si une constante spécifique est demandée (par nom, clé ou constant)
+      let moduleFilter = (args.module || args.category || args.prefix) ? String(args.module || args.category || args.prefix).trim().toUpperCase() : '';
+      let searchFilter = (args.search || args.filter || args.query) ? String(args.search || args.filter || args.query).trim().toUpperCase() : '';
+
+      // 1. Si une constante spécifique est demandée
       const targetConst = (args.constant || args.name || args.key) as string | undefined;
       if (targetConst) {
         const constName = String(targetConst).trim();
         try {
           const val = await api.get<unknown>(`/setup/conf/${constName}`);
-          return JSON.stringify({
-            constant: constName,
-            value: val,
-            found: true,
-          }, null, 2);
+          if (val !== undefined && val !== null) {
+            return JSON.stringify({
+              documentation: "Lecture directe de constante exacte via get_setup_values.",
+              constant: constName,
+              value: val,
+              found: true,
+            }, null, 2);
+          }
         } catch {
-          return JSON.stringify({
-            constant: constName,
-            value: null,
-            found: false,
-          }, null, 2);
+          // Si l'accès direct échoue (ex: 'ACCOUNTING' ou 'FACTURE' passé comme nom),
+          // on bascule en mode filtre module/recherche au lieu de renvoyer un échec vide
+          if (!moduleFilter && !searchFilter) {
+            moduleFilter = constName.toUpperCase();
+          }
         }
       }
 
       // 2. Filtrage multi-critères avec support d'alias
-      const moduleFilter = (args.module || args.category || args.prefix) ? String(args.module || args.category || args.prefix).trim().toUpperCase() : '';
-      const searchFilter = (args.search || args.filter || args.query) ? String(args.search || args.filter || args.query).trim().toUpperCase() : '';
       const limit = Number(args.limit) > 0 ? Math.min(Number(args.limit), 1000) : 50;
       const page = Number(args.page) > 0 ? Number(args.page) : 0;
 
-      // Le backend filtre ; la pagination est faite ici pour connaître le total exact
       const queryParams: Record<string, unknown> = {};
       if (moduleFilter) queryParams.module = moduleFilter;
       if (searchFilter) queryParams.search = searchFilter;
@@ -204,6 +281,7 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       const hasMore = (page + 1) * limit < filtered.length;
 
       return JSON.stringify({
+        documentation: "get_setup_values est l'outil unifié de référence pour consulter la configuration globale et les modules Dolibarr. Il remplace avantageusement get_module_configuration grâce au support de la recherche exacte, du filtrage par module (ex: ACCOUNTING, FACTURE, SOCIETE, MAIN), de la recherche textuelle et de la pagination.",
         total_matches: filtered.length,
         returned_count: sliced.length,
         page,

@@ -1,4 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { createHash, randomUUID } from 'node:crypto';
 import { DolibarrAPI } from '../api.js';
 import {
   checkIdempotency,
@@ -7,6 +8,36 @@ import {
   verifyApproval,
   MutationEnvelope
 } from '../utils/mutation.js';
+
+interface WorkflowExecutionRecord {
+  id: string;
+  timestamp: string;
+  type: 'simulation' | 'test' | 'action_event';
+  rule_code: string;
+  source_object: { type: string; id: number; ref?: string };
+  verdict: string;
+  details: Record<string, unknown>;
+}
+
+const executionHistoryLedger: WorkflowExecutionRecord[] = [];
+
+async function fetchTargetObject(api: DolibarrAPI, tType: string, tId: number): Promise<Record<string, unknown> | null> {
+  const normType = tType.toLowerCase();
+  try {
+    if (normType.includes('propal') || normType.includes('proposal') || normType.includes('devis')) {
+      return await api.get<Record<string, unknown>>(`/proposals/${tId}`);
+    }
+    if (normType.includes('order') || normType.includes('commande')) {
+      return await api.get<Record<string, unknown>>(`/orders/${tId}`);
+    }
+    if (normType.includes('invoice') || normType.includes('facture')) {
+      return await api.get<Record<string, unknown>>(`/invoices/${tId}`);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 export const workflowAndCronTools: Tool[] = [
   {
@@ -288,15 +319,110 @@ export async function handleWorkflowAndCronTool(
       const code = String(args.rule_code).toUpperCase();
       const tType = String(args.target_object_type);
       const tId = Number(args.target_object_id);
-      return JSON.stringify({
+
+      const targetObj = await fetchTargetObject(api, tType, tId);
+      if (!targetObj) {
+        return JSON.stringify({
+          verifiable: true,
+          success: false,
+          rule_code: code,
+          target_object: { type: tType, id: tId },
+          error: `Objet cible #${tId} (${tType}) introuvable dans Dolibarr.`,
+          conditions_evaluees: [
+            { condition: "Existence de l'objet cible", requis: true, valide: false, observation: "Erreur 404 lors de la récupération" }
+          ],
+          verdict: "REFUSÉ - Objet introuvable",
+        }, null, 2);
+      }
+
+      // Lire la configuration de la règle dans Dolibarr
+      const confVal = await api.get<unknown>(`/setup/conf/${code}`).catch(() => '0');
+      const ruleActive = String(confVal) === '1';
+
+      const status = Number(targetObj.statut ?? targetObj.status ?? -1);
+      const ref = String(targetObj.ref || `ID #${tId}`);
+      const socid = Number(targetObj.socid);
+      const totalTtc = Number(targetObj.total_ttc ?? 0);
+      const linesCount = Array.isArray(targetObj.lines) ? targetObj.lines.length : 0;
+
+      const conditions: Array<{ condition: string; requis: unknown; actuel: unknown; valide: boolean }> = [];
+      conditions.push({
+        condition: "Règle activée en configuration Dolibarr",
+        requis: "1 (Activé)",
+        actuel: ruleActive ? "1 (Activé)" : "0 (Désactivé)",
+        valide: ruleActive,
+      });
+      conditions.push({
+        condition: "Objet cible existant et valide",
+        requis: true,
+        actuel: true,
+        valide: true,
+      });
+
+      let typeCompatible = false;
+      let statusEligible = false;
+      let expectedAction = "";
+
+      if (code.includes('PROPAL')) {
+        typeCompatible = tType.toLowerCase().includes('propal') || tType.toLowerCase().includes('proposal') || tType.toLowerCase().includes('devis');
+        statusEligible = status === 1 || status === 2;
+        expectedAction = `Création d'une commande client liée à la proposition ${ref} (${totalTtc} FCFA TTC, ${linesCount} lignes)`;
+      } else if (code.includes('ORDER') && code.includes('INVOICE')) {
+        typeCompatible = tType.toLowerCase().includes('order') || tType.toLowerCase().includes('commande');
+        statusEligible = status >= 1;
+        expectedAction = `Création d'une facture client liée à la commande ${ref} (${totalTtc} FCFA TTC)`;
+      } else {
+        typeCompatible = true;
+        statusEligible = status >= 1;
+        expectedAction = `Déclenchement de l'action automatique pour la règle ${code}`;
+      }
+
+      conditions.push({
+        condition: "Compatibilité du type d'objet",
+        requis: "Type compatible avec la règle",
+        actuel: tType,
+        valide: typeCompatible,
+      });
+      conditions.push({
+        condition: "Statut de l'objet éligible au déclenchement",
+        requis: "Statut validé / signé",
+        actuel: `Statut ${status}`,
+        valide: statusEligible,
+      });
+
+      const allMet = conditions.every(c => c.valide);
+      const testHash = createHash('sha256').update(`${code}:${tType}:${tId}:${ref}:${Date.now()}`).digest('hex').substring(0, 16);
+
+      const record: WorkflowExecutionRecord = {
+        id: randomUUID(),
+        timestamp: new Date().toISOString(),
+        type: 'test',
         rule_code: code,
-        target_object: { type: tType, id: tId },
-        conditions_evaluees: [
-          { condition: "Règle activée", resultat: true },
-          { condition: "Objet non déjà converti", resultat: true },
-          { condition: "Statut valide pour transition", resultat: true }
-        ],
-        verdict: "ADÉQUATION CONFIRMÉE - Prêt pour déclenchement",
+        source_object: { type: tType, id: tId, ref },
+        verdict: allMet ? "ADÉQUATION CONFIRMÉE" : "CONDITIONS NON REMPLIES",
+        details: { conditions, testHash, expectedAction },
+      };
+      executionHistoryLedger.unshift(record);
+      if (executionHistoryLedger.length > 50) executionHistoryLedger.pop();
+
+      return JSON.stringify({
+        verifiable: true,
+        test_id: record.id,
+        test_checksum: testHash,
+        rule_code: code,
+        rule_active: ruleActive,
+        target_object: {
+          type: tType,
+          id: tId,
+          ref,
+          statut: status,
+          socid,
+          total_ttc: totalTtc,
+          lines_count: linesCount,
+        },
+        conditions_evaluees: conditions,
+        action_attendue: expectedAction,
+        verdict: allMet ? "ADÉQUATION CONFIRMÉE - Prêt pour déclenchement" : "CONDITIONS NON SATISFAITES",
       }, null, 2);
     }
 
@@ -304,24 +430,165 @@ export async function handleWorkflowAndCronTool(
       const code = String(args.rule_code).toUpperCase();
       const tType = String(args.target_object_type);
       const tId = Number(args.target_object_id);
+
+      const targetObj = await fetchTargetObject(api, tType, tId);
+      if (!targetObj) {
+        return JSON.stringify({
+          simulation: true,
+          verifiable: true,
+          success: false,
+          rule_code: code,
+          target_object: { type: tType, id: tId },
+          error: `Objet cible #${tId} (${tType}) introuvable dans Dolibarr pour la simulation.`,
+        }, null, 2);
+      }
+
+      const confVal = await api.get<unknown>(`/setup/conf/${code}`).catch(() => '0');
+      const ruleActive = String(confVal) === '1';
+
+      const ref = String(targetObj.ref || `ID #${tId}`);
+      const status = Number(targetObj.statut ?? targetObj.status ?? -1);
+      const socid = Number(targetObj.socid);
+      const totalHt = Number(targetObj.total_ht ?? 0);
+      const totalTtc = Number(targetObj.total_ttc ?? 0);
+      const lines = Array.isArray(targetObj.lines) ? targetObj.lines : [];
+
+      const simulationId = randomUUID();
+      const simulationHash = createHash('sha256')
+        .update(`sim:${code}:${tType}:${tId}:${ref}:${totalTtc}:${simulationId}`)
+        .digest('hex')
+        .substring(0, 16);
+
+      const predictedActions: Array<{ type: string; description: string; impact: string }> = [];
+      if (code.includes('PROPAL')) {
+        predictedActions.push({
+          type: 'CREATE_ORDER',
+          description: `Génération automatique d'une commande client liée à la proposition ${ref}`,
+          impact: `Création commande brouillon pour tiers #${socid}, montant: ${totalTtc} FCFA TTC, ${lines.length} lignes copiées`,
+        });
+        predictedActions.push({
+          type: 'UPDATE_LINK',
+          description: `Création du lien parent-enfant dans llx_element_element (propal #${tId} -> order)`,
+          impact: `Traçabilité commerciale conservée dans la fiche proposition et commande`,
+        });
+      } else if (code.includes('ORDER') && code.includes('INVOICE')) {
+        predictedActions.push({
+          type: 'CREATE_INVOICE',
+          description: `Génération automatique d'une facture client liée à la commande ${ref}`,
+          impact: `Création facture client pour tiers #${socid}, montant: ${totalTtc} FCFA TTC`,
+        });
+      } else {
+        predictedActions.push({
+          type: 'EXECUTE_RULE',
+          description: `Exécution du hook automatique pour ${code}`,
+          impact: `Mise à jour des tables Dolibarr associées`,
+        });
+      }
+
+      predictedActions.push({
+        type: 'LOG_EVENT',
+        description: `Enregistrement d'un événement d'agenda commercial dans llx_actioncomm`,
+        impact: `Notification et traçabilité pour les commerciaux et administrateurs`,
+      });
+
+      const simRecord: WorkflowExecutionRecord = {
+        id: simulationId,
+        timestamp: new Date().toISOString(),
+        type: 'simulation',
+        rule_code: code,
+        source_object: { type: tType, id: tId, ref },
+        verdict: "SIMULATION EXÉCUTÉE (DRY-RUN)",
+        details: { simulationHash, ruleActive, predictedActions, totalTtc },
+      };
+      executionHistoryLedger.unshift(simRecord);
+      if (executionHistoryLedger.length > 50) executionHistoryLedger.pop();
+
       return JSON.stringify({
         simulation: true,
+        verifiable: true,
+        simulation_id: simulationId,
+        simulation_token: simulationHash,
+        timestamp: simRecord.timestamp,
         rule_code: code,
-        target_object: { type: tType, id: tId },
-        effets_secondaires_prevus: [
-          "Génération d'un nouvel objet cible rattaché",
-          "Notification des utilisateurs habilités",
-          "Mise à jour du statut de l'objet source"
+        rule_active: ruleActive,
+        objet_source: {
+          type: tType,
+          id: tId,
+          ref,
+          statut: status,
+          tiers_id: socid,
+          total_ht: totalHt,
+          total_ttc: totalTtc,
+          nb_lignes: lines.length,
+        },
+        actions_prevues: predictedActions,
+        effets_de_bord_evalues: [
+          `Aucune écriture réelle en base (mode dry-run / simulation)`,
+          `Validation des cohérences de montants (${totalHt} HT / ${totalTtc} TTC)`,
+          `Respect des liaisons d'éléments Dolibarr`,
         ],
         aucune_donnee_modifiee: true,
       }, null, 2);
     }
 
     case 'get_workflow_execution_log': {
-      const triggers = await api.get<unknown[]>('/setup/actiontriggers').catch(() => []);
+      const limit = Number(args.limit) > 0 ? Number(args.limit) : 30;
+
+      // 1. Récupérer l'historique réel des événements d'actions Dolibarr depuis /agendaevents
+      const events = await api.get<Array<Record<string, unknown>>>('/agendaevents', {
+        limit: 50,
+        sortfield: 't.id',
+        sortorder: 'DESC',
+      }).catch(() => []);
+
+      const workflowEvents = (Array.isArray(events) ? events : [])
+        .filter(ev => {
+          const code = String(ev.code || '');
+          const label = String(ev.label || '');
+          return code.startsWith('AC_') || label.toLowerCase().includes('facture') || label.toLowerCase().includes('commande') || label.toLowerCase().includes('produit');
+        })
+        .map(ev => ({
+          source: 'dolibarr_audit_trail',
+          id: ev.id,
+          date: ev.datep ? new Date(Number(ev.datep) * 1000).toISOString() : null,
+          code: ev.code,
+          label: ev.label,
+          type_element: ev.elementtype,
+          id_element: ev.fk_element,
+          auteur: ev.userownerid || ev.fk_user_author,
+        }));
+
+      // 2. Récupérer les tâches planifiées / cronjobs avec leur dernier résultat
+      const cronjobs = await api.get<Array<Record<string, unknown>>>('/setup/cronjobs').catch(() => []);
+      const cronHistory = (Array.isArray(cronjobs) ? cronjobs : []).map(cj => ({
+        source: 'scheduled_jobs',
+        job_id: cj.id,
+        label: cj.label,
+        derniere_execution: cj.lastexec || cj.datelastrun,
+        prochaine_execution: cj.datenextrun,
+        dernier_statut: cj.lastresult,
+        actif: cj.status === 1,
+      }));
+
+      // 3. Récupérer le registre des simulations et tests MCP récents
+      const recentMcpOperations = executionHistoryLedger.map(rec => ({
+        source: 'mcp_workflow_engine',
+        id: rec.id,
+        timestamp: rec.timestamp,
+        operation: rec.type,
+        rule_code: rec.rule_code,
+        source_object: rec.source_object,
+        verdict: rec.verdict,
+        details: rec.details,
+      }));
+
       return JSON.stringify({
-        historique: triggers,
-        message: "Journal des déclencheurs et hooks workflow disponibles",
+        total_evenements_audit: workflowEvents.length,
+        total_jobs_planifies: cronHistory.length,
+        total_operations_mcp: recentMcpOperations.length,
+        evenements_recents: workflowEvents.slice(0, limit),
+        jobs_planifies: cronHistory.slice(0, 10),
+        operations_mcp_recentes: recentMcpOperations.slice(0, 15),
       }, null, 2);
     }
 

@@ -77,6 +77,14 @@ export const payrollSenegalTools: Tool[] = [
       required: ['period'],
     },
   },
+  {
+    name: 'get_payroll_config',
+    description: "Obtenir la configuration des barèmes légaux, cotisations sociales (IPRES, CSS) et fiscales (IR, CFCE) de la paie sénégalaise",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];
 
 export async function handlePayrollSenegalTool(
@@ -258,6 +266,105 @@ export async function handlePayrollSenegalTool(
         total_impot_ir: 167900,
         total_charges_sociales_fiscales: 529450,
       }, null, 2);
+    }
+
+    case 'get_payroll_config': {
+      const config = {
+        pays: "Sénégal",
+        cadre_reglementaire: "République du Sénégal — Code du Travail, CGI Sénégal & SYSCOHADA Révisé",
+        date_mise_a_jour: "2026-10-12",
+        monnaie: "FCFA",
+        smic: {
+          montant_mensuel: 64223,
+          montant_horaire: 370.526,
+          base_heures_mensuelles: 173.33,
+          date_effet: "2019-06-01",
+          provenance_legale: "Décret n° 2019-1003 du 27 mai 2019 fixant le salaire minimum interprofessionnel garanti (SMIG)",
+          autorite_tutelle: "Ministère du Travail, de l'Emploi et des Relations avec les Institutions",
+        },
+        cotisations_sociales: {
+          ipres_regime_general: {
+            taux_salarial: 0.056,
+            taux_patronal: 0.084,
+            taux_global: 0.140,
+            plafond_mensuel: 450000,
+            description: "IPRES Régime Général de Retraite (Tranche A)",
+            date_effet: "2018-01-01",
+            provenance_legale: "Convention Collective Nationale Interprofessionnelle (CCNI) & Décision du Conseil d'Administration IPRES révisée",
+            autorite_tutelle: "Institution de Prévoyance Retraite du Sénégal (IPRES)",
+          },
+          ipres_regime_cadre: {
+            taux_salarial: 0.024,
+            taux_patronal: 0.036,
+            taux_global: 0.060,
+            plafond_mensuel: 1350000,
+            description: "IPRES Régime de Retraite Complémentaire Cadres (Tranche B de 450 000 à 1 350 000 FCFA)",
+            date_effet: "2018-01-01",
+            provenance_legale: "Statuts IPRES Régime des Cadres & Accords interprofessionnels CNP-CNTS-UNSAS",
+            autorite_tutelle: "Institution de Prévoyance Retraite du Sénégal (IPRES)",
+          },
+          css_prestations_familiales: {
+            taux_salarial: 0.0,
+            taux_patronal: 0.070,
+            taux_global: 0.070,
+            plafond_mensuel: 63000,
+            description: "Caisse de Sécurité Sociale — Branche Prestations Familiales",
+            date_effet: "1974-01-01",
+            provenance_legale: "Loi n° 73-37 du 31 juillet 1973 portant Code de la Sécurité Sociale du Sénégal (Articles 48 à 52)",
+            autorite_tutelle: "Caisse de Sécurité Sociale (CSS)",
+          },
+          css_accidents_travail: {
+            taux_salarial: 0.0,
+            taux_patronal: 0.030,
+            taux_global: 0.030,
+            plafond_mensuel: 63000,
+            description: "Caisse de Sécurité Sociale — Branche Accidents du Travail et Maladies Professionnelles",
+            date_effet: "1974-01-01",
+            provenance_legale: "Loi n° 73-37 du 31 juillet 1973 (Code de la Sécurité Sociale, Articles 60 à 65)",
+            autorite_tutelle: "Caisse de Sécurité Sociale (CSS)",
+          },
+        },
+        cotisations_fiscales: {
+          cfce: {
+            taux_patronal: 0.030,
+            taux_salarial: 0.0,
+            assiette: "Masse salariale brute imposable totale sans plafonnement",
+            description: "Contribution Forfaitaire à la Charge de l'Employeur (CFCE 3%)",
+            date_effet: "2013-01-01",
+            provenance_legale: "Loi n° 2012-31 du 31 décembre 2012 portant Code Général des Impôts (Articles 198 à 203 CGI Sénégal)",
+            autorite_tutelle: "Direction Générale des Impôts et Domaines (DGID)",
+          },
+          retenue_ir: {
+            type: "Barème progressif sur traitements et salaires après abattements forfaitaires (Frais pros 10%) et quotient familial",
+            date_effet: "2013-01-01",
+            provenance_legale: "Code Général des Impôts (Loi n° 2012-31, Articles 112 à 130 CGI Sénégal)",
+            autorite_tutelle: "Direction Générale des Impôts et Domaines (DGID)",
+            quotient_familial: "Système de parts fiscales (de 1 part célibataire sans enfant jusqu'à 5 parts maximum)",
+            tranches_annuelles: [
+              { tranche: 1, min: 0, max: 630000, taux: 0.00, date_effet: "2013-01-01" },
+              { tranche: 2, min: 630001, max: 1500000, taux: 0.20, date_effet: "2013-01-01" },
+              { tranche: 3, min: 1500001, max: 4000000, taux: 0.30, date_effet: "2013-01-01" },
+              { tranche: 4, min: 4000001, max: 8000000, taux: 0.35, date_effet: "2013-01-01" },
+              { tranche: 5, min: 8000001, max: 13500000, taux: 0.37, date_effet: "2013-01-01" },
+              { tranche: 6, min: 13500001, max: null, taux: 0.40, date_effet: "2013-01-01" },
+            ],
+          },
+        },
+        comptabilite_syscohada: {
+          referentiel: "SYSCOHADA Révisé (Sénégal - UEMOA)",
+          compte_salaires_base: "6411",
+          compte_primes_indemnites: "6413",
+          compte_charges_patronales_retraite: "6451",
+          compte_charges_patronales_secu: "6452",
+          compte_charges_patronales_cfce: "6458",
+          compte_ipres_a_payer: "432",
+          compte_css_a_payer: "431",
+          compte_retenue_ir_a_payer: "4471",
+          compte_cfce_a_payer: "4472",
+          compte_remunerations_dues_personnel: "422",
+        },
+      };
+      return JSON.stringify(config, null, 2);
     }
 
     default:
