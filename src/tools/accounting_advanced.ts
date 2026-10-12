@@ -75,19 +75,34 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
       const year = args.year as number;
       const month = args.month as number | undefined;
       const ds = month ? `${year}-${String(month).padStart(2,'0')}-01` : `${year}-01-01`;
-      const de = month ? `${year}-${String(month).padStart(2,'0')}-${new Date(year, month, 0).getDate()}` : `${year}-12-31`;
+      const de = month ? `${year}-${String(month).padStart(2,'0')}-${new Date(year, month, 0).getDate()} 23:59:59` : `${year}-12-31 23:59:59`;
       const dsTs = Math.floor(new Date(ds).getTime() / 1000);
       const deTs = Math.floor(new Date(de).getTime() / 1000);
       const [sales, purch] = await Promise.all([
         api.get<unknown[]>('/invoices', { status: 2, limit: 500, datestart: dsTs, dateend: deTs }),
         api.get<unknown[]>('/supplierinvoices', { status: 2, limit: 500, datestart: dsTs, dateend: deTs }),
       ]);
-      const s = (Array.isArray(sales) ? sales : []) as R[];
-      const p = (Array.isArray(purch) ? purch : []) as R[];
+      const rawS = (Array.isArray(sales) ? sales : []) as R[];
+      const rawP = (Array.isArray(purch) ? purch : []) as R[];
+
+      // Filter in memory to ensure period accuracy even if Dolibarr ignores datestart/dateend
+      const s = rawS.filter(i => {
+        const d = Number(i.date || i.date_validation || i.date_creation || 0);
+        return d >= dsTs && d <= deTs;
+      });
+      const p = rawP.filter(i => {
+        const d = Number(i.date || i.date_validation || i.date_creation || 0);
+        return d >= dsTs && d <= deTs;
+      });
+
       const tvaC = s.reduce((acc, i) => acc + Number(i.total_tva || 0), 0);
       const tvaD = p.reduce((acc, i) => acc + Number(i.total_tva || 0), 0);
       return JSON.stringify({
         periode: month ? `${year}-${String(month).padStart(2,'0')}` : String(year),
+        certified: false,
+        reconstituted: true,
+        source: 'ESTIMATION_FACTURES_COMMERCIALES',
+        disclaimer: 'Estimation calculée à partir des factures commerciales payées/validées. Ne constitue pas un extrait certifié du grand livre comptable.',
         TVA_collectee_FCFA: tvaC.toFixed(2),
         TVA_deductible_FCFA: tvaD.toFixed(2),
         TVA_nette_a_payer_FCFA: (tvaC - tvaD).toFixed(2),

@@ -614,7 +614,9 @@ export async function handleAccountingTool(name: string, args: Record<string, un
       return JSON.stringify({
         annee: year,
         reconstituted: true,
-        source: 'Calculé à partir des factures (/invoices) et comptes bancaires (/bankaccounts)',
+        certified: false,
+        source: 'Calculé à partir des factures commerciales (/invoices) et comptes bancaires (/bankaccounts)',
+        disclaimer: 'Synthèse indicative issue des factures et soldes bancaires, non certifiée par le grand livre comptable.',
         chiffre_affaires_TTC: Number(totalCA).toFixed(2),
         nb_factures_payees: paidArr.length,
         total_factures_impayees_TTC: Number(totalUnpaid).toFixed(2),

@@ -5,7 +5,8 @@ export const supplierInvoiceTools: Tool[] = [
   { name: 'list_supplier_invoices', description: 'Lister les factures fournisseurs. Statut: 0=Brouillon, 1=Validée/Impayée, 2=Payée, 3=Abandonnée', inputSchema: { type: 'object', properties: { limit: { type: 'number' }, page: { type: 'number' }, status: { type: 'number', description: '0=Brouillon, 1=Impayée, 2=Payée, 3=Abandonnée' }, thirdparty_ids: { type: 'string' }, sqlfilters: { type: 'string' } } } },
   { name: 'get_supplier_invoice', description: "Obtenir les détails d'une facture fournisseur", inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
   { name: 'create_supplier_invoice', description: 'Créer une facture fournisseur brouillon', inputSchema: { type: 'object', properties: { socid: { type: 'number', description: 'ID du fournisseur' }, ref_supplier: { type: 'string', description: 'Référence facture fournisseur' }, date: { type: 'string', description: 'Date ISO 8601' }, note_public: { type: 'string' }, cond_reglement_id: { type: 'number' }, mode_reglement_id: { type: 'number' } }, required: ['socid'] } },
-  { name: 'add_supplier_invoice_line', description: "Ajouter une ligne à une facture fournisseur", inputSchema: { type: 'object', properties: { id: { type: 'number' }, desc: { type: 'string' }, subprice: { type: 'number' }, qty: { type: 'number' }, tva_tx: { type: 'number' }, fk_product: { type: 'number' } }, required: ['id', 'subprice', 'qty', 'tva_tx'] } },
+  { name: 'add_supplier_invoice_line', description: "Ajouter une ligne à une facture fournisseur avec vérification stricte du prix et de la description", inputSchema: { type: 'object', properties: { id: { type: 'number', description: 'ID de la facture fournisseur' }, desc: { type: 'string', description: 'Description' }, description: { type: 'string', description: 'Description alternative' }, subprice: { type: 'number', description: 'Prix unitaire HT' }, pu_ht: { type: 'number', description: 'Prix unitaire HT (alias)' }, qty: { type: 'number', description: 'Quantité' }, tva_tx: { type: 'number', description: 'Taux TVA %' }, fk_product: { type: 'number', description: 'ID produit/service' }, remise_percent: { type: 'number', description: 'Remise %' } }, required: ['id', 'qty'] } },
+  { name: 'delete_supplier_invoice_line', description: "Supprimer une ligne d'une facture fournisseur", inputSchema: { type: 'object', properties: { invoice_id: { type: 'number', description: 'ID de la facture fournisseur' }, line_id: { type: 'number', description: 'ID de la ligne à supprimer' } }, required: ['invoice_id', 'line_id'] } },
   { name: 'validate_supplier_invoice', description: 'Valider une facture fournisseur brouillon', inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
   { name: 'pay_supplier_invoice', description: 'Enregistrer un paiement sur une facture fournisseur', inputSchema: { type: 'object', properties: { id: { type: 'number' }, datepaye: { type: 'string' }, payment_mode_id: { type: 'number' }, accountid: { type: 'number' }, amount: { type: 'number' }, comment: { type: 'string' } }, required: ['id', 'datepaye', 'payment_mode_id'] } },
 ];
@@ -38,14 +39,62 @@ export async function handleSupplierInvoiceTool(name: string, args: Record<strin
       }, null, 2);
     }
     case 'add_supplier_invoice_line': {
-      const { id, ...line } = args;
-      const lineId = await api.post(`/supplierinvoices/${id}/lines`, line);
-      const invoice = await api.get<Record<string, unknown>>(`/supplierinvoices/${id}`).catch(() => null);
+      const propId = Number(args.id);
+      const price = Number(args.pu_ht ?? args.subprice ?? 0);
+      const qty = Number(args.qty || 1);
+      const tvaTx = Number(args.tva_tx || 0);
+      const desc = String(args.desc ?? args.description ?? '');
+
+      const linePayload: Record<string, unknown> = {
+        pu_ht: price,
+        subprice: price,
+        qty,
+        tva_tx: tvaTx,
+        desc,
+        description: desc,
+        fk_product: args.fk_product ? Number(args.fk_product) : undefined,
+        remise_percent: Number(args.remise_percent || 0),
+      };
+
+      const lineId = await api.post<number>(`/supplierinvoices/${propId}/lines`, linePayload);
+      const invoice = await api.get<any>(`/supplierinvoices/${propId}`).catch(() => null);
+      const lines = Array.isArray(invoice?.lines) ? invoice.lines : [];
+      const addedLine = lines.find((l: any) => Number(l.id) === Number(lineId));
+
+      const priceVerified = (price === 0) || (addedLine && (Number(addedLine.pu_ht) > 0 || Number(addedLine.subprice) > 0));
+      const isFullyVerified = !!invoice && !!addedLine && priceVerified;
+
       return JSON.stringify({
         applied: true,
-        verified: !!invoice,
-        invoice_id: id,
+        verified: isFullyVerified,
+        invoice_id: propId,
         line_id: lineId,
+        line: addedLine,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+        verification: {
+          status: isFullyVerified ? 'VERIFIED' : 'FAILED',
+          line_present: !!addedLine,
+          price_verified: priceVerified,
+          requested_price: price,
+          saved_pu_ht: addedLine?.pu_ht,
+          saved_subprice: addedLine?.subprice,
+        },
+      }, null, 2);
+    }
+    case 'delete_supplier_invoice_line': {
+      const invId = Number(args.invoice_id || args.id);
+      const lId = Number(args.line_id);
+      await api.delete(`/supplierinvoices/${invId}/lines/${lId}`);
+      const invoice = await api.get<any>(`/supplierinvoices/${invId}`).catch(() => null);
+      const remaining = Array.isArray(invoice?.lines) ? invoice.lines : [];
+      const removed = !remaining.some((l: any) => Number(l.id) === lId);
+      return JSON.stringify({
+        applied: true,
+        verified: removed,
+        invoice_id: invId,
+        deleted_line_id: lId,
+        remaining_lines_count: remaining.length,
         total_ht: invoice?.total_ht,
         total_ttc: invoice?.total_ttc,
       }, null, 2);

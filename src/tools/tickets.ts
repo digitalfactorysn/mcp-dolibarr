@@ -133,15 +133,23 @@ export async function handleTicketTool(name: string, args: Record<string, unknow
       }, null, 2);
     }
     case 'close_ticket': {
-      await api.put(`/tickets/${args.id}`, { status: 5 });
+      const now = Math.floor(Date.now() / 1000);
+      await api.put(`/tickets/${args.id}`, {
+        status: 5,
+        fk_statut: 5,
+        date_close: now,
+        progress: 100,
+      });
       const ticket = await api.get<Record<string, unknown>>(`/tickets/${args.id}`).catch(() => null);
-      const isClosed = ticket && String(ticket.status) === '5';
+      const isClosed = ticket && (String(ticket.status) === '5' || String(ticket.fk_statut) === '5') && !!ticket.date_close;
       return JSON.stringify({
         applied: true,
         verified: !!isClosed,
         ticket_id: args.id,
         status: ticket?.status,
-        message: isClosed ? `Ticket #${args.id} fermé avec succès.` : `Fermeture demandée pour le ticket #${args.id}.`,
+        date_close: ticket?.date_close,
+        progress: ticket?.progress,
+        message: isClosed ? `Ticket #${args.id} (${ticket?.ref || ''}) fermé avec succès et horodaté.` : `Fermeture demandée pour le ticket #${args.id}.`,
       }, null, 2);
     }
     case 'assign_ticket': {

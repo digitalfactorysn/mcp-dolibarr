@@ -38,16 +38,42 @@ export async function handleInterventionTool(name: string, args: Record<string, 
       }, null, 2);
     }
     case 'add_intervention_line': {
-      const { id, ...line } = args;
-      if (line.date) line.date = Math.floor(new Date(line.date as string).getTime() / 1000);
-      const lineId = await api.post(`/interventions/${id}/lines`, line);
+      const id = Number(args.id);
+      const desc = (args.desc || args.description || 'Prestation') as string;
+      const duration = Number(args.duree || args.duration || 3600);
+      let dateTs: number;
+      if (typeof args.date === 'number') {
+        dateTs = args.date;
+      } else if (typeof args.date === 'string') {
+        const parsed = new Date(args.date).getTime();
+        dateTs = isNaN(parsed) ? Math.floor(Date.now() / 1000) : Math.floor(parsed / 1000);
+      } else {
+        dateTs = Math.floor(Date.now() / 1000);
+      }
+
+      const payload: Record<string, unknown> = {
+        description: desc,
+        duration: duration,
+        date: dateTs,
+      };
+      if (args.subprice !== undefined) payload.subprice = Number(args.subprice);
+      if (args.qty !== undefined) payload.qty = Number(args.qty);
+      if (args.tva_tx !== undefined) payload.tva_tx = Number(args.tva_tx);
+      if (args.fk_product !== undefined) payload.fk_product = Number(args.fk_product);
+
+      const lineId = await api.post(`/interventions/${id}/lines`, payload);
       const intervention = await api.get<Record<string, unknown>>(`/interventions/${id}`).catch(() => null);
+      const lines = Array.isArray(intervention?.lines) ? (intervention.lines as Record<string, unknown>[]) : [];
+      const createdLine = lines.find(l => String(l.id) === String(lineId)) || (lines.length > 0 ? lines[lines.length - 1] : null);
+
       return JSON.stringify({
         applied: true,
-        verified: !!intervention,
+        verified: !!createdLine,
         intervention_id: id,
         line_id: lineId,
-        lines_count: Array.isArray(intervention?.lines) ? intervention.lines.length : undefined,
+        description: desc,
+        duration,
+        lines_count: lines.length,
       }, null, 2);
     }
     case 'validate_intervention': {

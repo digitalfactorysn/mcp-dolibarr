@@ -443,18 +443,50 @@ export async function handleContractsProjectsOpsTool(
     case 'add_task_time': {
       const id = Number(args.task_id);
       const duration = Number(args.duration_seconds);
+      const userId = Number(args.user_id) || 1;
+
+      // Dolibarr expects "date" in format "YYYY-MM-DD HH:MM:SS"
+      let formattedDate: string;
+      if (args.date && typeof args.date === 'string') {
+        const dStr = (args.date as string).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+          formattedDate = `${dStr} 12:00:00`;
+        } else if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(dStr)) {
+          formattedDate = dStr;
+        } else {
+          const parsed = new Date(dStr);
+          if (!isNaN(parsed.getTime())) {
+            formattedDate = parsed.toISOString().replace('T', ' ').substring(0, 19);
+          } else {
+            formattedDate = new Date().toISOString().replace('T', ' ').substring(0, 19);
+          }
+        }
+      } else {
+        formattedDate = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      }
+
+      const note = (args.note as string) || 'Saisie MCP';
       const res = await api.post(`/tasks/${id}/addtimespent`, {
         duration,
-        task_date: args.date || new Date().toISOString().split('T')[0],
-        note: args.note || 'Saisie MCP',
-        fk_user: args.user_id,
+        date: formattedDate,
+        note,
+        fk_user: userId,
       });
+
+      const entries = await api.get<Record<string, unknown>[]>(`/tasks/${id}/timespent`).catch(() => []);
+      const entryList = Array.isArray(entries) ? entries : [];
+      const verified = entryList.length > 0;
+
       return JSON.stringify({
         applied: true,
-        verified: true,
+        verified,
         task_id: id,
-        timespent_id: res,
+        result: res,
         duration_seconds: duration,
+        date: formattedDate,
+        user_id: userId,
+        note,
+        timespent_count: entryList.length,
       }, null, 2);
     }
 
