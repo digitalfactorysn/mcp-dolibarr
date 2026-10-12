@@ -173,17 +173,92 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       }, null, 2);
     }
     case 'add_order_line': {
-      const { id, ...line } = args;
-      const lineId = await api.post(`/orders/${id}/lines`, line);
-      const order = await api.get<Record<string, unknown>>(`/orders/${id}`).catch(() => null);
+      const { id } = args;
+      if (!id) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID de la commande manquant." }, null, 2);
+      }
+      const orderId = Number(id);
+
+      const qty = Number(args.qty);
+      if (isNaN(qty) || qty <= 0) {
+        return JSON.stringify({ applied: false, verified: false, error: `Quantité invalide (${args.qty}) : la quantité doit être > 0.` }, null, 2);
+      }
+
+      let fk_product: number | null = null;
+      let product: Record<string, unknown> | null = null;
+      if (args.fk_product !== undefined && args.fk_product !== null && String(args.fk_product).trim() !== '') {
+        fk_product = Number(args.fk_product);
+        try {
+          product = await api.get<Record<string, unknown>>(`/products/${fk_product}`);
+        } catch {
+          return JSON.stringify({ applied: false, verified: false, error: `Produit demandé (ID #${fk_product}) introuvable dans le catalogue.` }, null, 2);
+        }
+        if (!product || !product.id) {
+          return JSON.stringify({ applied: false, verified: false, error: `Produit demandé (ID #${fk_product}) introuvable dans le catalogue.` }, null, 2);
+        }
+      }
+
+      let subprice: number;
+      if (args.subprice !== undefined && args.subprice !== null) {
+        subprice = Number(args.subprice);
+      } else if (product && product.price !== undefined) {
+        subprice = Number(product.price);
+      } else {
+        return JSON.stringify({ applied: false, verified: false, error: "Prix unitaire HT manquant et non déterminé par le produit." }, null, 2);
+      }
+
+      if (isNaN(subprice) || subprice <= 0) {
+        return JSON.stringify({ applied: false, verified: false, error: `Prix unitaire invalide (${subprice}) : la ligne ne peut pas valoir zéro.` }, null, 2);
+      }
+
+      let tva_tx = 0;
+      if (args.tva_tx !== undefined && args.tva_tx !== null) {
+        tva_tx = Number(args.tva_tx);
+      } else if (product && product.tva_tx !== undefined) {
+        tva_tx = Number(product.tva_tx);
+      } else {
+        tva_tx = 18;
+      }
+
+      const remise_percent = Number(args.remise_percent || 0);
+      let desc = String(args.desc || '').trim();
+      if (!desc && product) {
+        desc = String(product.label || product.description || '').trim();
+      }
+      const product_type = product ? Number(product.type || 0) : 0;
+
+      const ordBefore = await api.get<Record<string, unknown>>(`/orders/${orderId}`).catch(() => null);
+      const initialCount = Array.isArray(ordBefore?.lines) ? ordBefore.lines.length : 0;
+
+      const linePayload: Record<string, unknown> = {
+        desc,
+        subprice,
+        qty,
+        tva_tx,
+        remise_percent,
+      };
+      if (fk_product) {
+        linePayload.fk_product = fk_product;
+        linePayload.product_type = product_type;
+      }
+
+      const lineId = await api.post(`/orders/${orderId}/lines`, linePayload);
+      const order = await api.get<Record<string, unknown>>(`/orders/${orderId}`);
+      const afterLines = Array.isArray(order.lines) ? order.lines : [];
+      const exactlyOneAdded = (afterLines.length === initialCount + 1);
+
       return JSON.stringify({
         applied: true,
-        verified: !!order,
-        order_id: id,
+        verified: !!order && exactlyOneAdded,
+        order_id: orderId,
         line_id: lineId,
         total_ht: order?.total_ht,
         total_ttc: order?.total_ttc,
-        lines_count: Array.isArray(order?.lines) ? order.lines.length : undefined,
+        lines_count: {
+          before: initialCount,
+          after: afterLines.length,
+          exactly_one_added: exactlyOneAdded,
+        },
       }, null, 2);
     }
     case 'validate_order': {
@@ -200,7 +275,32 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       }, null, 2);
     }
     case 'convert_order_to_invoice': {
-      const invoiceId = await api.post<number>(`/orders/${args.id}/invoice`, {});
+      let invoiceId: number | null = null;
+      try {
+        invoiceId = await api.post<number>(`/orders/${args.id}/invoice`, {});
+      } catch {
+        // Fallback standard Dolibarr : création directe depuis commande avec lignes
+        const order = await api.get<Record<string, unknown>>(`/orders/${args.id}`).catch(() => null);
+        if (!order) throw new Error(`Commande #${args.id} introuvable.`);
+        const invLines = Array.isArray(order.lines) ? order.lines.map((l: any) => ({
+          desc: l.desc,
+          subprice: Number(l.subprice),
+          qty: Number(l.qty),
+          tva_tx: Number(l.tva_tx),
+          fk_product: l.fk_product ? Number(l.fk_product) : undefined,
+          remise_percent: Number(l.remise_percent || 0),
+        })) : [];
+
+        invoiceId = await api.post<number>('/invoices', {
+          socid: order.socid,
+          type: 0,
+          date: Math.floor(Date.now() / 1000),
+          origin: 'commande',
+          origin_id: args.id,
+          lines: invLines,
+        });
+      }
+
       const invoice = await api.get<Record<string, unknown>>(`/invoices/${invoiceId}`).catch(() => null);
       return JSON.stringify({
         applied: true,
