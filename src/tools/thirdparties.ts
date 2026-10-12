@@ -46,6 +46,8 @@ export const thirdpartyTools: Tool[] = [
         country_id: { type: 'number', description: 'ID pays (ex: 221 pour Sénégal)' },
         tva_intracom: { type: 'string', description: 'Numéro TVA intracommunautaire' },
         siret: { type: 'string', description: 'SIRET ou NINEA' },
+        code_client: { type: 'string', description: "Code client (optionnel, 'auto' ou '-1' pour génération automatique)" },
+        code_fournisseur: { type: 'string', description: "Code fournisseur (optionnel, 'auto' ou '-1' pour génération automatique)" },
         note_public: { type: 'string', description: 'Note publique sur le tiers' },
         note_private: { type: 'string', description: 'Note privée sur le tiers' },
         codecompta: { type: 'string', description: 'Code comptable du tiers' },
@@ -139,7 +141,16 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       return JSON.stringify(data, null, 2);
     }
     case 'create_thirdparty': {
-      const id = await api.post<number>('/thirdparties', args);
+      const payload: Record<string, unknown> = { ...args };
+      // Dolibarr exige un code_client (-1 déclenche le module de numérotation automatique)
+      if (args.code_client === 'auto' || (!args.code_client && args.client !== 0)) {
+        payload.code_client = '-1';
+      }
+      // Dolibarr exige un code_fournisseur (-1 déclenche le module de numérotation automatique)
+      if (args.code_fournisseur === 'auto' || (!args.code_fournisseur && args.fournisseur === 1)) {
+        payload.code_fournisseur = '-1';
+      }
+      const id = await api.post<number>('/thirdparties', payload);
       const created = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
       return JSON.stringify({
         applied: true,
@@ -147,7 +158,10 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
         id,
         name: created?.name || args.name,
         code_client: created?.code_client,
-        thirdparty: created || { id, ...args },
+        code_fournisseur: created?.code_fournisseur,
+        client: created?.client ?? args.client,
+        fournisseur: created?.fournisseur ?? args.fournisseur,
+        thirdparty: created || { id, ...payload },
       }, null, 2);
     }
     case 'update_thirdparty': {

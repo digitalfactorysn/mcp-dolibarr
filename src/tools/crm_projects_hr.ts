@@ -130,6 +130,7 @@ export const projectTools: Tool[] = [
       type: 'object',
       properties: {
         project_id: { type: 'number', description: 'ID du projet parent' },
+        ref: { type: 'string', description: "Référence unique de la tâche (ex: 'TK2610-001'). Optionnel: générée automatiquement si omise." },
         label: { type: 'string', description: 'Titre de la tâche' },
         description: { type: 'string', description: 'Description de la tâche' },
         date_start: { type: 'string', description: 'Date de début ISO 8601' },
@@ -277,9 +278,47 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
     case 'create_task': {
       const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
       const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date_start, date_end };
-      const id = await api.post('/tasks', { ...payload, fk_project: args.project_id });
-      return `✅ Tâche créée dans le projet #${args.project_id}. ID tâche: ${id}\nLabel: ${args.label}`;
+
+      // Récupérer le projet parent pour contextualiser et valider
+      const project = await api.get<Record<string, unknown>>(`/projects/${args.project_id}`).catch(() => null);
+
+      // Génération automatique de référence si non spécifiée ou 'auto'
+      let ref = (args.ref as string | undefined)?.trim();
+      if (!ref || ref.toLowerCase() === 'auto') {
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        ref = `TK${yy}${mm}-${rand}`;
+      }
+
+      const payload = {
+        ...args,
+        ref,
+        fk_project: args.project_id,
+        date_start,
+        date_end,
+      };
+
+      const id = await api.post<number>('/tasks', payload);
+
+      // Relecture immédiate pour vérification de l'état
+      const created = await api.get<Record<string, unknown>>(`/tasks/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || ref,
+        parent_project: {
+          id: args.project_id,
+          ref: project?.ref,
+          title: project?.title,
+        },
+        label: created?.label || args.label,
+        verification_status: created ? 'VERIFIED' : 'FAILED_READBACK',
+        task: created || { id, ...payload },
+      }, null, 2);
     }
     default:
       throw new Error(`Outil Projet inconnu: ${name}`);
