@@ -161,6 +161,7 @@ mcp_servers:
     trust: untrusted
     tools:
       include:
+        - accept_proposal
         - activate_contract_line
         - add_bank_transaction
         - add_contract_line
@@ -246,6 +247,8 @@ mcp_servers:
         - delete_document
         - delete_intervention_line
         - delete_invoice_line
+        - delete_proposal
+        - delete_proposal_line
         - delete_setup_value
         - delete_task
         - deliver_shipment

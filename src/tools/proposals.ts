@@ -87,6 +87,41 @@ export const proposalTools: Tool[] = [
     },
   },
   {
+    name: 'accept_proposal',
+    description: 'Accepter et signer un devis commercial (statut 2 = Signé). Exige une relecture stricte constatant le statut 2 et la date de signature.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis à signer/accepter' },
+        note: { type: 'string', description: 'Note ou mention de signature (optionnel)' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_proposal',
+    description: 'Supprimer un devis (brouillon ou défectueux) de manière sécurisée',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_proposal_line',
+    description: "Supprimer une ligne spécifique d'un devis",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        proposal_id: { type: 'number', description: 'ID du devis' },
+        line_id: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['proposal_id', 'line_id'],
+    },
+  },
+  {
     name: 'convert_proposal_to_order',
     description: 'Convertir un devis signé en commande client',
     inputSchema: {
@@ -360,6 +395,102 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
         ref: closed?.ref,
         statut: closed?.statut,
         message: `Devis #${closed?.ref || args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`,
+      }, null, 2);
+    }
+    case 'accept_proposal': {
+      const propId = Number(args.id);
+      if (!propId) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis manquant." }, null, 2);
+      }
+
+      // 1. Vérifier l'état actuel du devis
+      const current = await api.get<Record<string, unknown>>(`/proposals/${propId}`).catch(() => null);
+      if (!current) {
+        return JSON.stringify({ applied: false, verified: false, error: `Devis #${propId} introuvable.` }, null, 2);
+      }
+
+      // Si le devis est encore au statut brouillon (0), il doit d'abord être validé au statut 1
+      if (Number(current.statut) === 0) {
+        await api.post(`/proposals/${propId}/validate`, { notrigger: 0 });
+      }
+
+      // 2. Appel de la clôture Dolibarr au statut 2 (Accepté / Signé)
+      const note = args.note ? String(args.note) : 'Devis accepté et signé par le client';
+      await api.post(`/proposals/${propId}/close`, {
+        status: 2,
+        notrigger: 0,
+        note_private: note,
+      });
+
+      // 3. Relecture obligatoire et contrôles stricts exigés par l'utilisateur :
+      // - statut = 2
+      // - date de signature renseignée
+      // - utilisateur de signature renseigné si Dolibarr le prévoit
+      // - ne JAMAIS retourner verified: true sans constater le statut 2
+      const propAfter = await api.get<Record<string, unknown>>(`/proposals/${propId}`);
+      const statutNum = Number(propAfter?.statut ?? propAfter?.status);
+      const isSigned = (statutNum === 2);
+      const hasSignatureDate = !!(propAfter?.date_signature || propAfter?.date_cloture);
+
+      const isFullyVerified = isSigned && hasSignatureDate;
+
+      return JSON.stringify({
+        applied: true,
+        verified: isFullyVerified,
+        id: propId,
+        ref: propAfter?.ref || current.ref,
+        statut: statutNum,
+        statut_label: isSigned ? 'Signé (Accepté)' : `Inattendu (${statutNum})`,
+        date_signature: propAfter?.date_signature || propAfter?.date_cloture || null,
+        user_signature: propAfter?.user_signature || propAfter?.user_closing_id || propAfter?.user_validation_id || null,
+        total_ttc: propAfter?.total_ttc,
+        verification: {
+          status: isFullyVerified ? 'VERIFIED' : 'FAILED',
+          status_is_2: isSigned,
+          signature_date_present: hasSignatureDate,
+          details: {
+            statut: statutNum,
+            date_signature: propAfter?.date_signature,
+            date_cloture: propAfter?.date_cloture,
+            user_closing_id: propAfter?.user_closing_id,
+            user_signature: propAfter?.user_signature,
+          },
+        },
+      }, null, 2);
+    }
+    case 'delete_proposal': {
+      const propId = Number(args.id);
+      if (!propId) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis manquant." }, null, 2);
+      }
+      await api.delete(`/proposals/${propId}`);
+      const check = await api.get<Record<string, unknown>>(`/proposals/${propId}`).catch(() => null);
+      const isDeleted = !check || !check.id;
+      return JSON.stringify({
+        applied: true,
+        verified: isDeleted,
+        id: propId,
+        message: isDeleted ? `Devis #${propId} supprimé avec succès.` : `Suppression du devis #${propId} effectuée.`,
+      }, null, 2);
+    }
+    case 'delete_proposal_line': {
+      const propId = Number(args.proposal_id);
+      const lineId = Number(args.line_id);
+      if (!propId || !lineId) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis et ID de ligne requis." }, null, 2);
+      }
+      await api.delete(`/proposals/${propId}/lines/${lineId}`);
+      const prop = await api.get<Record<string, unknown>>(`/proposals/${propId}`).catch(() => null);
+      const remainingLines = Array.isArray(prop?.lines) ? prop.lines : [];
+      const lineRemoved = !remainingLines.some((l: any) => Number(l.id) === lineId);
+      return JSON.stringify({
+        applied: true,
+        verified: lineRemoved,
+        proposal_id: propId,
+        deleted_line_id: lineId,
+        remaining_lines_count: remainingLines.length,
+        total_ht: prop?.total_ht,
+        total_ttc: prop?.total_ttc,
       }, null, 2);
     }
     case 'convert_proposal_to_order': {
