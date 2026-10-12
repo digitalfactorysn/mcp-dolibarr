@@ -13,6 +13,15 @@ export const accountingTools: Tool[] = [
     },
   },
   {
+    name: 'get_bank_account',
+    description: "Lire un compte bancaire (réf, compte comptable, journal associé, solde) — utile pour vérifier une configuration",
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'number', description: 'ID du compte bancaire' } },
+      required: ['id'],
+    },
+  },
+  {
     name: 'get_bank_transactions',
     description: "Lister les transactions d'un compte bancaire avec filtres de date",
     inputSchema: {
@@ -233,6 +242,16 @@ export async function handleAccountingTool(name: string, args: Record<string, un
       else params.status = 1;
       const data = await api.get('/bankaccounts', params);
       return JSON.stringify(data, null, 2);
+    }
+
+    case 'get_bank_account': {
+      const b = await api.get<Record<string, unknown>>(`/bankaccounts/${Number(args.id)}`);
+      return JSON.stringify({
+        id: b.id, ref: b.ref, label: b.label, bank: b.bank, type: b.type, clos: b.clos,
+        currency_code: b.currency_code, account_number: b.account_number,
+        fk_accountancy_journal: b.fk_accountancy_journal, accountancy_journal: b.accountancy_journal,
+        balance: b.balance, production_protected: Number(b.id) === 1,
+      }, null, 2);
     }
 
     case 'get_bank_transactions': {

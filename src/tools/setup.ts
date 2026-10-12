@@ -49,8 +49,8 @@ export const setupTools: Tool[] = [
         constant: { type: 'string', description: "Nom exact de la constante (ex: 'MAIN_MONNAIE', 'CHARTOFACCOUNTS', alias: 'name' ou 'key')." },
         module: { type: 'string', description: "Filtrer par module (ex: 'FACTURE', 'SOCIETE', 'MAIN', 'ACCOUNTING', alias: 'prefix')" },
         search: { type: 'string', description: "Recherche par mot-clé dans les noms ou valeurs (alias: 'filter' ou 'query')" },
-        limit: { type: 'number', description: "Nombre maximum de constantes à retourner (défaut: 50)" },
-        page: { type: 'number', description: "Numéro de page (défaut: 0)" },
+        limit: { type: 'number', description: "Nombre maximum de constantes par page (défaut: 50, max: 1000)" },
+        page: { type: 'number', description: "Page (0 = première). Utiliser next_page de la réponse si has_more=true" },
       },
     },
   },
@@ -169,15 +169,13 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       // 2. Filtrage multi-critères avec support d'alias
       const moduleFilter = (args.module || args.category || args.prefix) ? String(args.module || args.category || args.prefix).trim().toUpperCase() : '';
       const searchFilter = (args.search || args.filter || args.query) ? String(args.search || args.filter || args.query).trim().toUpperCase() : '';
-      const limit = Number(args.limit) > 0 ? Number(args.limit) : 50;
+      const limit = Number(args.limit) > 0 ? Math.min(Number(args.limit), 1000) : 50;
       const page = Number(args.page) > 0 ? Number(args.page) : 0;
 
-      // Requête avec paramètres au backend Dolibarr
+      // Le backend filtre ; la pagination est faite ici pour connaître le total exact
       const queryParams: Record<string, unknown> = {};
       if (moduleFilter) queryParams.module = moduleFilter;
       if (searchFilter) queryParams.search = searchFilter;
-      if (limit) queryParams.limit = limit;
-      if (page) queryParams.page = page;
 
       const rawConf = await api.get<Record<string, unknown>>('/setup/conf', queryParams);
       const allEntries = Object.entries(rawConf || {});
@@ -196,17 +194,22 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
         return true;
       });
 
-      const sliced = filtered.slice(0, limit);
+      const sliced = filtered.slice(page * limit, page * limit + limit);
       const resultObj: Record<string, unknown> = {};
       const entriesArr: Array<{ name: string; value: unknown }> = [];
       sliced.forEach(([k, v]) => {
         resultObj[k] = v;
         entriesArr.push({ name: k, value: v });
       });
+      const hasMore = (page + 1) * limit < filtered.length;
 
       return JSON.stringify({
         total_matches: filtered.length,
         returned_count: sliced.length,
+        page,
+        limit,
+        has_more: hasMore,
+        next_page: hasMore ? page + 1 : null,
         filter_module: moduleFilter || undefined,
         filter_search: searchFilter || undefined,
         constants: resultObj,
