@@ -35,8 +35,12 @@ export const payrollSenegalTools: Tool[] = [
         tax_parts: { type: 'number', description: "Nombre de parts fiscales IR (défaut: 1)" },
         overtime: { type: 'number', description: "Heures supplémentaires en FCFA" },
         bonuses: { type: 'number', description: "Primes imposables en FCFA" },
+        employees: {
+          type: 'array',
+          items: { type: 'object' },
+          description: "Liste de salariés pour calcul groupé (optionnel)",
+        },
       },
-      required: ['base_salary'],
     },
   },
   {
@@ -84,64 +88,94 @@ export async function handlePayrollSenegalTool(
 
   switch (name) {
     case 'calculate_payroll_slips': {
-      const base = Number(args.base_salary || 0);
-      const isExec = Boolean(args.is_executive);
-      const parts = Number(args.tax_parts || 1);
-      const overtime = Number(args.overtime || 0);
-      const bonuses = Number(args.bonuses || 0);
+      const calcSingle = (e: Record<string, unknown>) => {
+        const base = Number(e.base_salary || e.salaire_de_base || 0);
+        const isExec = Boolean(e.is_executive || e.statut_cadre);
+        const parts = Number(e.tax_parts || e.nombre_parts || 1);
+        const overtime = Number(e.overtime || e.heures_sup || 0);
+        const bonuses = Number(e.bonuses || e.primes_imposables || 0);
+        const empName = e.name ? String(e.name) : undefined;
+        const matricule = e.matricule ? String(e.matricule) : undefined;
 
-      const brut = base + overtime + bonuses;
+        const brut = base + overtime + bonuses;
 
-      // Cotisations Sénégal
-      // IPRES Régime Général: 5.6% salarié, 8.4% employeur (plafond 468,000 FCFA)
-      const ipresBase = Math.min(brut, 468000);
-      const ipresSalarial = Math.round(ipresBase * 0.056);
-      const ipresPatronal = Math.round(ipresBase * 0.084);
+        // IPRES Régime Général: 5.6% salarié, 8.4% employeur (plafond légal 450 000 FCFA)
+        const ipresBase = Math.min(brut, 450000);
+        const ipresSalarial = Math.round(ipresBase * 0.056);
+        const ipresPatronal = Math.round(ipresBase * 0.084);
 
-      // IPRES Cadre (si applicable, plafond 1,404,000 FCFA): 2.4% salarié, 3.6% employeur
-      const ipresCadreSalarial = isExec ? Math.round(Math.min(brut, 1404000) * 0.024) : 0;
-      const ipresCadrePatronal = isExec ? Math.round(Math.min(brut, 1404000) * 0.036) : 0;
+        // IPRES Cadre (si applicable, plafond 1 350 000 FCFA): 2.4% salarié, 3.6% employeur
+        const ipresCadreSalarial = isExec ? Math.round(Math.min(brut, 1350000) * 0.024) : 0;
+        const ipresCadrePatronal = isExec ? Math.round(Math.min(brut, 1350000) * 0.036) : 0;
 
-      // CSS (Caisse de Sécurité Sociale - 100% patronal: Prestations familiales 7%, Accidents du travail 1-5%)
-      const cssPatronal = Math.round(Math.min(brut, 63000) * 0.07);
+        // CSS (Prestations familiales 7% plafonné à 63 000 FCFA, Accidents du travail 1-3%)
+        const cssPatronal = Math.round(Math.min(brut, 63000) * 0.07);
 
-      // Impôt sur le Revenu (Barème progressif simplifié Sénégal)
-      const brutFiscal = brut - (ipresSalarial + ipresCadreSalarial);
-      // Abattement forfaitaire charges professionnelles 10%
-      const baseIr = brutFiscal * 0.9;
-      let irBrut = 0;
-      if (baseIr > 50000) irBrut += (Math.min(baseIr, 130000) - 50000) * 0.15;
-      if (baseIr > 130000) irBrut += (Math.min(baseIr, 250000) - 130000) * 0.20;
-      if (baseIr > 250000) irBrut += (baseIr - 250000) * 0.30;
+        // CFCE (Contribution Forfaitaire à la Charge de l'Employeur: 3%)
+        const cfcePatronal = Math.round(brut * 0.03);
 
-      // Réduction d'impôt pour charge de famille (selon parts)
-      const reductionParts = Math.min(0.40, (parts - 1) * 0.10);
-      const irNet = Math.max(0, Math.round(irBrut * (1 - reductionParts)));
+        // Impôt sur le Revenu
+        const brutFiscal = brut - (ipresSalarial + ipresCadreSalarial);
+        const baseIr = brutFiscal * 0.9;
+        let irBrut = 0;
+        if (baseIr > 50000) irBrut += (Math.min(baseIr, 130000) - 50000) * 0.15;
+        if (baseIr > 130000) irBrut += (Math.min(baseIr, 250000) - 130000) * 0.20;
+        if (baseIr > 250000) irBrut += (baseIr - 250000) * 0.30;
 
-      // Net à payer
-      const totalRetenuesSalariales = ipresSalarial + ipresCadreSalarial + irNet;
-      const netAPayer = Math.round(brut - totalRetenuesSalariales);
-      const totalChargesPatronales = ipresPatronal + ipresCadrePatronal + cssPatronal;
+        const reductionParts = Math.min(0.40, (parts - 1) * 0.10);
+        const irNet = Math.max(0, Math.round(irBrut * (1 - reductionParts)));
 
+        const totalRetenuesSalariales = ipresSalarial + ipresCadreSalarial + irNet;
+        const netAPayer = Math.round(brut - totalRetenuesSalariales);
+        const totalChargesPatronales = ipresPatronal + ipresCadrePatronal + cssPatronal + cfcePatronal;
+
+        return {
+          name: empName,
+          matricule,
+          salaire_brut: brut,
+          elements_brut: { base, overtime, bonuses },
+          cotisations_salariales: {
+            ipres_regime_general: ipresSalarial,
+            ipres_cadre: ipresCadreSalarial,
+            retenue_ir: irNet,
+            total_salarial: totalRetenuesSalariales,
+          },
+          cotisations_patronales: {
+            ipres_patronal: ipresPatronal,
+            ipres_cadre_patronal: ipresCadrePatronal,
+            css_prestations_familiales: cssPatronal,
+            cfce_employeur: cfcePatronal,
+            total_patronal: totalChargesPatronales,
+          },
+          net_a_payer: netAPayer,
+          cout_total_employeur: brut + totalChargesPatronales,
+        };
+      };
+
+      if (Array.isArray(args.employees) && args.employees.length > 0) {
+        const results = (args.employees as Array<Record<string, unknown>>).map(calcSingle);
+        const totBrut = results.reduce((a, r) => a + r.salaire_brut, 0);
+        const totNet = results.reduce((a, r) => a + r.net_a_payer, 0);
+        const totSal = results.reduce((a, r) => a + r.cotisations_salariales.total_salarial, 0);
+        const totPat = results.reduce((a, r) => a + r.cotisations_patronales.total_patronal, 0);
+        return JSON.stringify({
+          pays: "Sénégal (Législation du travail & Code Général des Impôts)",
+          devises: "FCFA",
+          nombre_salaries: results.length,
+          total_masse_salariale_brute: totBrut,
+          total_net_a_payer: totNet,
+          total_charges_salariales: totSal,
+          total_charges_patronales: totPat,
+          cout_total_masse: totBrut + totPat,
+          salaries: results
+        }, null, 2);
+      }
+
+      const single = calcSingle(args);
       return JSON.stringify({
         pays: "Sénégal (Législation du travail & Code Général des Impôts)",
         devises: "FCFA",
-        salaire_brut: brut,
-        elements_brut: { base, overtime, bonuses },
-        cotisations_salariales: {
-          ipres_regime_general: ipresSalarial,
-          ipres_cadre: ipresCadreSalarial,
-          retenue_ir: irNet,
-          total_salarial: totalRetenuesSalariales,
-        },
-        cotisations_patronales: {
-          ipres_patronal: ipresPatronal,
-          ipres_cadre_patronal: ipresCadrePatronal,
-          css_prestations_familiales: cssPatronal,
-          total_patronal: totalChargesPatronales,
-        },
-        net_a_payer: netAPayer,
-        cout_total_employeur: brut + totalChargesPatronales,
+        ...single
       }, null, 2);
     }
 
