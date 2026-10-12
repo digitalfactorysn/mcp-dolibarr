@@ -125,7 +125,7 @@ app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     service: "mcp-dolibarr",
-    version: "5.3.0",
+    version: "5.4.0",
     dolibarr_url: DOLIBARR_URL,
     sessions: sessions.size,
     timestamp: new Date().toISOString(),

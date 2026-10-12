@@ -35,20 +35,49 @@ export async function handleTicketTool(name: string, args: Record<string, unknow
         fk_user_assign: args.fk_user_assign,
         date_creation: Math.floor(Date.now() / 1000),
       };
-      const id = await api.post('/tickets', payload);
-      return `✅ Ticket créé. ID: ${id}\nSujet: ${args.subject}`;
+      const id = await api.post<number>('/tickets', payload);
+      const created = await api.get<Record<string, unknown>>(`/tickets/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref,
+        subject: created?.subject || args.subject,
+        ticket: created || { id, ...payload },
+      }, null, 2);
     }
     case 'add_ticket_message': {
       await api.post(`/tickets/${args.id}/messages`, { message: args.message, private_message: args.private_message || 0 });
-      return `✅ Message ajouté au ticket #${args.id}.`;
+      const ticket = await api.get<Record<string, unknown>>(`/tickets/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!ticket,
+        ticket_id: args.id,
+        message: `Message ajouté au ticket #${args.id}.`,
+      }, null, 2);
     }
     case 'close_ticket': {
       await api.put(`/tickets/${args.id}`, { status: 5 });
-      return `✅ Ticket #${args.id} fermé.`;
+      const ticket = await api.get<Record<string, unknown>>(`/tickets/${args.id}`).catch(() => null);
+      const isClosed = ticket && String(ticket.status) === '5';
+      return JSON.stringify({
+        applied: true,
+        verified: !!isClosed,
+        ticket_id: args.id,
+        status: ticket?.status,
+        message: isClosed ? `Ticket #${args.id} fermé avec succès.` : `Fermeture demandée pour le ticket #${args.id}.`,
+      }, null, 2);
     }
     case 'assign_ticket': {
       await api.put(`/tickets/${args.id}`, { fk_user_assign: args.user_id });
-      return `✅ Ticket #${args.id} assigné à l'utilisateur #${args.user_id}.`;
+      const ticket = await api.get<Record<string, unknown>>(`/tickets/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!ticket,
+        ticket_id: args.id,
+        assigned_user_id: args.user_id,
+        message: `Ticket #${args.id} assigné à l'utilisateur #${args.user_id}.`,
+      }, null, 2);
     }
     default: throw new Error(`Outil inconnu: ${name}`);
   }

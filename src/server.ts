@@ -105,14 +105,19 @@ export function createServer(): Server {
   const DOLIBARR_API_KEY = process.env.DOLIBARR_API_KEY;
   if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
   const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
-  const server = new Server({ name: "mcp-dolibarr", version: "5.3.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "mcp-dolibarr", version: "5.4.0" }, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args } = req.params;
+    const t0 = Date.now();
     try {
       const result = await routeTool(name, (args as Record<string, unknown>) || {}, api);
+      const duration = Date.now() - t0;
+      console.error(`[MCP] Tool success: ${name} (${duration}ms)`);
       return { content: [{ type: "text" as const, text: result }] };
     } catch (error) {
+      const duration = Date.now() - t0;
+      console.error(`[MCP] Tool error: ${name} (${duration}ms) — ${error instanceof Error ? error.message : error}`);
       return { content: [{ type: "text" as const, text: `❌ ${error instanceof Error ? error.message : 'Erreur inconnue'}` }], isError: true };
     }
   });

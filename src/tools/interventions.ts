@@ -26,22 +26,53 @@ export async function handleInterventionTool(name: string, args: Record<string, 
     }
     case 'create_intervention': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/interventions', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
-      return `✅ Fiche d'intervention créée. ID: ${id}`;
+      const id = await api.post<number>('/interventions', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
+      const created = await api.get<Record<string, unknown>>(`/interventions/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref,
+        socid: args.socid,
+        intervention: created || { id, ...args },
+      }, null, 2);
     }
     case 'add_intervention_line': {
       const { id, ...line } = args;
       if (line.date) line.date = Math.floor(new Date(line.date as string).getTime() / 1000);
       const lineId = await api.post(`/interventions/${id}/lines`, line);
-      return `✅ Ligne ajoutée à l'intervention #${id}. ID ligne: ${lineId}`;
+      const intervention = await api.get<Record<string, unknown>>(`/interventions/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!intervention,
+        intervention_id: id,
+        line_id: lineId,
+        lines_count: Array.isArray(intervention?.lines) ? intervention.lines.length : undefined,
+      }, null, 2);
     }
     case 'validate_intervention': {
       await api.post(`/interventions/${args.id}/validate`, {});
-      return `✅ Fiche d'intervention #${args.id} validée.`;
+      const intervention = await api.get<Record<string, unknown>>(`/interventions/${args.id}`).catch(() => null);
+      const isOk = intervention && (String(intervention.statut) === '1' || String(intervention.statut) === '2');
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: intervention?.ref,
+        statut: intervention?.statut,
+        message: isOk ? `Intervention #${intervention?.ref || args.id} validée et vérifiée.` : `Validation demandée pour l'intervention #${args.id}.`,
+      }, null, 2);
     }
     case 'close_intervention': {
       await api.post(`/interventions/${args.id}/close`, {});
-      return `✅ Fiche d'intervention #${args.id} clôturée.`;
+      const intervention = await api.get<Record<string, unknown>>(`/interventions/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!intervention,
+        id: args.id,
+        statut: intervention?.statut,
+        message: `Fiche d'intervention #${args.id} clôturée.`,
+      }, null, 2);
     }
     default: throw new Error(`Outil inconnu: ${name}`);
   }

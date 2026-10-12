@@ -42,20 +42,21 @@ export const setupTools: Tool[] = [
   },
   {
     name: 'get_setup_values',
-    description: "Lire les constantes de configuration globale de Dolibarr avec filtrage par constante exacte, par module ou par mot-clé.",
+    description: "Lire les constantes de configuration globale de Dolibarr avec filtrage natif par constante exacte, par module ou par mot-clé.",
     inputSchema: {
       type: 'object',
       properties: {
-        constant: { type: 'string', description: "Nom exact de la constante (ex: 'MAIN_MONNAIE', 'CHARTOFACCOUNTS'). Si renseigné, lecture unitaire directe." },
-        module: { type: 'string', description: "Filtrer par module (ex: 'FACTURE', 'SOCIETE', 'MAIN', 'ACCOUNTING')" },
-        search: { type: 'string', description: "Recherche par mot-clé dans les noms ou valeurs de constantes" },
+        constant: { type: 'string', description: "Nom exact de la constante (ex: 'MAIN_MONNAIE', 'CHARTOFACCOUNTS', alias: 'name' ou 'key')." },
+        module: { type: 'string', description: "Filtrer par module (ex: 'FACTURE', 'SOCIETE', 'MAIN', 'ACCOUNTING', alias: 'prefix')" },
+        search: { type: 'string', description: "Recherche par mot-clé dans les noms ou valeurs (alias: 'filter' ou 'query')" },
         limit: { type: 'number', description: "Nombre maximum de constantes à retourner (défaut: 50)" },
+        page: { type: 'number', description: "Numéro de page (défaut: 0)" },
       },
     },
   },
   {
     name: 'set_setup_value',
-    description: "Modifier une constante de configuration globale de Dolibarr avec relecture immédiate de vérification.",
+    description: "Modifier ou créer une constante de configuration globale de Dolibarr avec relecture immédiate de vérification.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -63,6 +64,17 @@ export const setupTools: Tool[] = [
         value: { type: 'string', description: 'Nouvelle valeur' },
       },
       required: ['constant', 'value'],
+    },
+  },
+  {
+    name: 'delete_setup_value',
+    description: "Supprimer une constante de configuration globale de Dolibarr avec vérification par relecture.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        constant: { type: 'string', description: 'Nom de la constante à supprimer' },
+      },
+      required: ['constant'],
     },
   },
   {
@@ -134,9 +146,10 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'get_setup_values': {
-      // 1. Si une constante spécifique est demandée, utiliser l'endpoint unitaire
-      if (args.constant) {
-        const constName = String(args.constant).trim();
+      // 1. Si une constante spécifique est demandée (par nom, clé ou constant)
+      const targetConst = (args.constant || args.name || args.key) as string | undefined;
+      if (targetConst) {
+        const constName = String(targetConst).trim();
         try {
           const val = await api.get<unknown>(`/setup/conf/${constName}`);
           return JSON.stringify({
@@ -153,13 +166,23 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
         }
       }
 
-      // 2. Sinon, lire l'ensemble des constantes globales et appliquer un filtrage côté client
-      const rawConf = await api.get<Record<string, unknown>>('/setup/conf');
-      const allEntries = Object.entries(rawConf || {});
-      const moduleFilter = args.module ? String(args.module).trim().toUpperCase() : '';
-      const searchFilter = args.search ? String(args.search).trim().toUpperCase() : '';
+      // 2. Filtrage multi-critères avec support d'alias
+      const moduleFilter = (args.module || args.category || args.prefix) ? String(args.module || args.category || args.prefix).trim().toUpperCase() : '';
+      const searchFilter = (args.search || args.filter || args.query) ? String(args.search || args.filter || args.query).trim().toUpperCase() : '';
       const limit = Number(args.limit) > 0 ? Number(args.limit) : 50;
+      const page = Number(args.page) > 0 ? Number(args.page) : 0;
 
+      // Requête avec paramètres au backend Dolibarr
+      const queryParams: Record<string, unknown> = {};
+      if (moduleFilter) queryParams.module = moduleFilter;
+      if (searchFilter) queryParams.search = searchFilter;
+      if (limit) queryParams.limit = limit;
+      if (page) queryParams.page = page;
+
+      const rawConf = await api.get<Record<string, unknown>>('/setup/conf', queryParams);
+      const allEntries = Object.entries(rawConf || {});
+
+      // Filtrage de cohérence côté client
       const filtered = allEntries.filter(([k, v]) => {
         const keyUpper = k.toUpperCase();
         const valStr = String(v ?? '').toUpperCase();
@@ -175,8 +198,10 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
 
       const sliced = filtered.slice(0, limit);
       const resultObj: Record<string, unknown> = {};
+      const entriesArr: Array<{ name: string; value: unknown }> = [];
       sliced.forEach(([k, v]) => {
         resultObj[k] = v;
+        entriesArr.push({ name: k, value: v });
       });
 
       return JSON.stringify({
@@ -185,17 +210,20 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
         filter_module: moduleFilter || undefined,
         filter_search: searchFilter || undefined,
         constants: resultObj,
+        entries: entriesArr,
       }, null, 2);
     }
     case 'set_setup_value': {
-      const constName = String(args.constant).trim();
+      const targetConst = (args.constant || args.name || args.key) as string;
+      const constName = String(targetConst).trim();
       const constVal = String(args.value);
       const payload = { constname: constName, constvalue: constVal };
-      await api.post('/setup/conf', payload);
+
+      await api.post('/setup/conf', payload).catch(() => api.put(`/setup/conf/${constName}`, { value: constVal }));
 
       // Relecture immédiate pour vérification
       const reread = await api.get<unknown>(`/setup/conf/${constName}`).catch(() => null);
-      const isVerified = String(reread) === constVal;
+      const isVerified = reread !== null && String(reread) === constVal;
 
       return JSON.stringify({
         applied: true,
@@ -206,6 +234,25 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
         message: isVerified
           ? `Constante '${constName}' définie à '${constVal}' et confirmée par relecture.`
           : `Constante '${constName}' mise à jour, valeur relue: '${reread}'.`,
+      }, null, 2);
+    }
+    case 'delete_setup_value': {
+      const targetConst = (args.constant || args.name || args.key) as string;
+      const constName = String(targetConst).trim();
+
+      await api.delete(`/setup/conf/${constName}`);
+
+      // Relecture immédiate pour vérification de la suppression
+      const reread = await api.get<unknown>(`/setup/conf/${constName}`).catch(() => null);
+      const isDeleted = reread === null;
+
+      return JSON.stringify({
+        applied: true,
+        verified: isDeleted,
+        constant: constName,
+        message: isDeleted
+          ? `Constante '${constName}' supprimée et confirmée par relecture.`
+          : `Constante '${constName}' suppression envoyée mais valeur résiduelle détectée: '${reread}'.`,
       }, null, 2);
     }
     case 'list_payment_methods': {

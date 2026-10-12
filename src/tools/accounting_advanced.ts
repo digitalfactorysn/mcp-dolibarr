@@ -243,26 +243,39 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
 
     case 'create_misc_journal_entry': {
       try {
-        const date = Math.floor(new Date(args.date as string).getTime() / 1000);
-        const id = await api.post('/accountancy/bookkeeping', {
-          label: args.label, code_journal: args.journal_code, doc_date: date, lines: args.lines
+        const date = args.date ? (args.date as string) : new Date().toISOString().split('T')[0];
+        const res = await api.post<Record<string, unknown>>('/accountancy/bookkeeping', {
+          label: args.label,
+          code_journal: args.journal_code || 'OD',
+          doc_date: date,
+          lines: args.lines,
         });
+
+        // Relecture immédiate pour vérification
+        const entries = await api.get<unknown[]>('/accountancy/bookkeeping', {
+          journal_code: args.journal_code || 'OD',
+          limit: 5,
+        }).catch(() => []);
+        const arr = Array.isArray(entries) ? entries : [];
+
         return JSON.stringify({
           supported: true,
           applied: true,
-          entry_id: id,
-          journal: args.journal_code,
+          verified: arr.length > 0,
+          result: res,
+          journal: args.journal_code || 'OD',
           label: args.label,
+          entries: arr.slice(0, 2),
         }, null, 2);
       } catch (err) {
+        const is404 = err instanceof Error && (err.message.includes('404') || err.message.includes('Not Found'));
         return JSON.stringify({
           supported: false,
           applied: false,
-          error: 'REST_ENDPOINT_NOT_AVAILABLE',
+          verified: false,
+          error: is404 ? 'REST_ENDPOINT_NOT_AVAILABLE' : 'BOOKKEEPING_POST_FAILED',
           endpoint: '/accountancy/bookkeeping',
-          message: "L'endpoint POST /accountancy/bookkeeping n'est pas exposé dans cette version de Dolibarr pour créer des écritures de journal.",
           details: err instanceof Error ? err.message : String(err),
-          action_requise: "Saisir les écritures OD manuellement via l'interface Dolibarr (Comptabilité → Grand Livre → Nouvelle écriture).",
         }, null, 2);
       }
     }

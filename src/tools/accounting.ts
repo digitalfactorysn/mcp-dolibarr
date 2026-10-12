@@ -57,13 +57,13 @@ export const accountingTools: Tool[] = [
   },
   {
     name: 'get_accounting_account',
-    description: "Obtenir les détails complets d'un compte comptable par son ID",
+    description: "Obtenir les détails complets d'un compte comptable par son ID ou son numéro de compte",
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du compte comptable' },
+        account_number: { type: 'string', description: "Numéro de compte (ex: '411', '5211')" },
       },
-      required: ['id'],
     },
   },
   {
@@ -95,12 +95,36 @@ export const accountingTools: Tool[] = [
     },
   },
   {
-    name: 'list_accounting_journals',
-    description: 'Lister les journaux comptables réels configurés dans Dolibarr (Ventes, Achats, Banque, OD, Frais, etc.)',
+    name: 'delete_accounting_account',
+    description: 'Supprimer un compte du plan comptable avec vérification par relecture',
     inputSchema: {
       type: 'object',
       properties: {
+        id: { type: 'number', description: 'ID du compte comptable à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_accounting_journals',
+    description: 'Lister les journaux comptables réels configurés dans Dolibarr (Ventes, Achats, Banque, OD, Frais, etc.) avec filtres',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: "Filtrer par code exact (ex: 'BQ', 'BNQ', 'VT', 'AC')" },
+        nature: { type: 'number', description: 'Filtrer par nature (1=OD, 2=Ventes, 3=Achats, 4=Banque, 5=Notes de frais, 8=Inventaire, 9=A-nouveaux)' },
         active: { type: 'number', description: '1=Actifs (défaut), 0=Inactifs, -1=Tous' },
+      },
+    },
+  },
+  {
+    name: 'get_accounting_journal',
+    description: "Obtenir les détails complets d'un journal comptable par son ID ou son code",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du journal comptable' },
+        code: { type: 'string', description: "Code du journal (ex: 'BQ', 'BNQ', 'VT')" },
       },
     },
   },
@@ -110,7 +134,7 @@ export const accountingTools: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        code: { type: 'string', description: "Code court du journal (ex: 'BQ2', 'PAY', 'OD2')" },
+        code: { type: 'string', description: "Code court du journal (ex: 'BQ2', 'BNQ', 'OD2')" },
         label: { type: 'string', description: "Libellé complet du journal" },
         nature: { type: 'number', description: 'Nature: 1=OD, 2=Ventes, 3=Achats, 4=Banque, 5=Notes de frais, 8=Inventaire, 9=A-nouveaux' },
         active: { type: 'number', description: '1=Actif (défaut), 0=Inactif' },
@@ -134,16 +158,59 @@ export const accountingTools: Tool[] = [
     },
   },
   {
+    name: 'delete_accounting_journal',
+    description: 'Supprimer un journal comptable dans Dolibarr avec vérification par relecture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du journal comptable à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
     name: 'list_accounting_entries',
-    description: 'Lister les écritures comptables du grand livre',
+    description: 'Lister les écritures réelles du grand livre comptable (bookkeeping)',
     inputSchema: {
       type: 'object',
       properties: {
         limit: { type: 'number', description: 'Nombre max' },
-        journal_code: { type: 'string', description: 'Code journal (ex: VTE, ACH, BNK)' },
+        journal_code: { type: 'string', description: 'Code journal (ex: VT, AC, BQ, OD)' },
+        account_number: { type: 'string', description: 'Préfixe ou numéro de compte (ex: 411, 521)' },
         date_start: { type: 'string', description: 'Date début ISO 8601' },
         date_end: { type: 'string', description: 'Date fin ISO 8601' },
       },
+    },
+  },
+  {
+    name: 'create_accounting_entry',
+    description: 'Créer une écriture comptable dans le grand livre avec vérification par relecture',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        journal_code: { type: 'string', description: "Code du journal (défaut: 'OD')" },
+        label: { type: 'string', description: "Libellé de l'opération" },
+        doc_date: { type: 'string', description: "Date de l'opération (ISO 8601, ex: '2026-10-12')" },
+        doc_ref: { type: 'string', description: 'Référence de pièce comptable' },
+        numero_compte: { type: 'string', description: 'Numéro de compte principal (si écriture simple)' },
+        debit: { type: 'number', description: 'Montant au débit' },
+        credit: { type: 'number', description: 'Montant au crédit' },
+        lines: {
+          type: 'array',
+          description: 'Lignes multiples pour écriture équilibrée',
+          items: {
+            type: 'object',
+            properties: {
+              numero_compte: { type: 'string' },
+              label_compte: { type: 'string' },
+              debit: { type: 'number' },
+              credit: { type: 'number' },
+            },
+            required: ['numero_compte'],
+          },
+        },
+      },
+      required: ['label'],
     },
   },
   {
@@ -225,9 +292,19 @@ export async function handleAccountingTool(name: string, args: Record<string, un
     }
 
     case 'get_accounting_account': {
-      const id = Number(args.id);
-      const data = await api.get(`/accountancy/accounts/${id}`);
-      return JSON.stringify(data, null, 2);
+      if (args.id) {
+        const id = Number(args.id);
+        const data = await api.get(`/accountancy/accounts/${id}`);
+        return JSON.stringify(data, null, 2);
+      } else if (args.account_number) {
+        const accNum = String(args.account_number).trim();
+        const data = await api.get<unknown[]>('/accountancy/accounts', { search_account: accNum });
+        const arr = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+        const found = arr.find(a => String(a.account_number) === accNum) || arr[0];
+        if (!found) throw new Error(`Compte comptable ${accNum} introuvable.`);
+        return JSON.stringify(found, null, 2);
+      }
+      throw new Error("L'ID ou le numéro de compte est requis.");
     }
 
     case 'create_accounting_account': {
@@ -266,10 +343,29 @@ export async function handleAccountingTool(name: string, args: Record<string, un
       }, null, 2);
     }
 
+    case 'delete_accounting_account': {
+      const id = Number(args.id);
+      await api.delete(`/accountancy/accounts/${id}`);
+      const reread = await api.get(`/accountancy/accounts/${id}`).catch(() => null);
+      const isDeleted = reread === null;
+
+      return JSON.stringify({
+        applied: true,
+        verified: isDeleted,
+        id,
+        message: isDeleted
+          ? `Compte comptable #${id} supprimé avec succès et vérifié par relecture.`
+          : `Compte comptable #${id} suppression envoyée.`,
+      }, null, 2);
+    }
+
     case 'list_accounting_journals': {
       try {
         const params: Record<string, unknown> = {};
         if (args.active !== undefined) params.active = args.active;
+        if (args.code) params.code = String(args.code).trim().toUpperCase();
+        if (args.nature !== undefined) params.nature = Number(args.nature);
+
         const data = await api.get('/accountancy/journals', params).catch(() => api.get('/accountancy/journal', params));
         return JSON.stringify(data, null, 2);
       } catch (err) {
@@ -282,6 +378,22 @@ export async function handleAccountingTool(name: string, args: Record<string, un
           action_requise: "Consulter les journaux via l'interface web Dolibarr (Comptabilité → Configuration → Journaux)."
         }, null, 2);
       }
+    }
+
+    case 'get_accounting_journal': {
+      if (args.id) {
+        const id = Number(args.id);
+        const data = await api.get(`/accountancy/journals/${id}`);
+        return JSON.stringify(data, null, 2);
+      } else if (args.code) {
+        const code = String(args.code).trim().toUpperCase();
+        const data = await api.get<unknown[]>('/accountancy/journals', { code });
+        const arr = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+        const found = arr.find(j => String(j.code).toUpperCase() === code);
+        if (!found) throw new Error(`Journal ${code} introuvable.`);
+        return JSON.stringify(found, null, 2);
+      }
+      throw new Error("L'ID ou le code du journal est requis.");
     }
 
     case 'create_accounting_journal': {
@@ -321,12 +433,30 @@ export async function handleAccountingTool(name: string, args: Record<string, un
       }, null, 2);
     }
 
+    case 'delete_accounting_journal': {
+      const id = Number(args.id);
+      await api.delete(`/accountancy/journals/${id}`);
+      const reread = await api.get(`/accountancy/journals/${id}`).catch(() => null);
+      const isDeleted = reread === null;
+
+      return JSON.stringify({
+        applied: true,
+        verified: isDeleted,
+        id,
+        message: isDeleted
+          ? `Journal comptable #${id} supprimé avec succès et vérifié par relecture.`
+          : `Journal comptable #${id} suppression envoyée.`,
+      }, null, 2);
+    }
+
     case 'list_accounting_entries': {
       try {
-        const params: Record<string, unknown> = { limit: args.limit || 100 };
-        if (args.journal_code) params.journal_code = args.journal_code;
-        if (args.date_start) params.date_start = Math.floor(new Date(args.date_start as string).getTime() / 1000);
-        if (args.date_end) params.date_end = Math.floor(new Date(args.date_end as string).getTime() / 1000);
+        const params: Record<string, unknown> = { limit: Number(args.limit) || 100 };
+        if (args.journal_code) params.journal_code = String(args.journal_code).trim().toUpperCase();
+        if (args.account_number) params.account_number = String(args.account_number).trim();
+        if (args.date_start) params.date_start = String(args.date_start);
+        if (args.date_end) params.date_end = String(args.date_end);
+
         const data = await api.get('/accountancy/bookkeeping', params);
         return JSON.stringify(data, null, 2);
       } catch (err) {
@@ -339,6 +469,36 @@ export async function handleAccountingTool(name: string, args: Record<string, un
           alternative: "Utiliser l'export comptable officiel export_accounting_entries (FEC) ou la balance générale."
         }, null, 2);
       }
+    }
+
+    case 'create_accounting_entry': {
+      const payload: Record<string, unknown> = {
+        code_journal: args.journal_code ? String(args.journal_code).trim().toUpperCase() : 'OD',
+        label: String(args.label).trim(),
+        doc_date: args.doc_date || new Date().toISOString().split('T')[0],
+        doc_ref: args.doc_ref || `OD-${Date.now()}`,
+      };
+      if (args.numero_compte) payload.numero_compte = String(args.numero_compte).trim();
+      if (args.debit !== undefined) payload.debit = Number(args.debit);
+      if (args.credit !== undefined) payload.credit = Number(args.credit);
+      if (args.lines) payload.lines = args.lines;
+
+      const result = await api.post<Record<string, unknown>>('/accountancy/bookkeeping', payload);
+
+      const entries = await api.get<unknown[]>('/accountancy/bookkeeping', {
+        journal_code: payload.code_journal,
+        limit: 5,
+      }).catch(() => []);
+      const arr = Array.isArray(entries) ? entries : [];
+
+      return JSON.stringify({
+        applied: true,
+        verified: arr.length > 0,
+        result,
+        journal_code: payload.code_journal,
+        label: payload.label,
+        entries: arr.slice(0, 2),
+      }, null, 2);
     }
 
     case 'get_financial_summary': {

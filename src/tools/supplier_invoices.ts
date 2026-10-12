@@ -26,17 +26,42 @@ export async function handleSupplierInvoiceTool(name: string, args: Record<strin
     }
     case 'create_supplier_invoice': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/supplierinvoices', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
-      return `✅ Facture fournisseur créée. ID: ${id}`;
+      const id = await api.post<number>('/supplierinvoices', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
+      const created = await api.get<Record<string, unknown>>(`/supplierinvoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref,
+        socid: args.socid,
+        supplier_invoice: created || { id, ...args },
+      }, null, 2);
     }
     case 'add_supplier_invoice_line': {
       const { id, ...line } = args;
       const lineId = await api.post(`/supplierinvoices/${id}/lines`, line);
-      return `✅ Ligne ajoutée à la facture fournisseur #${id}. ID ligne: ${lineId}`;
+      const invoice = await api.get<Record<string, unknown>>(`/supplierinvoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id: id,
+        line_id: lineId,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+      }, null, 2);
     }
     case 'validate_supplier_invoice': {
       await api.post(`/supplierinvoices/${args.id}/validate`, {});
-      return `✅ Facture fournisseur #${args.id} validée.`;
+      const invoice = await api.get<Record<string, unknown>>(`/supplierinvoices/${args.id}`).catch(() => null);
+      const isOk = invoice && (String(invoice.statut) === '1' || String(invoice.statut) === '2');
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: invoice?.ref,
+        statut: invoice?.statut,
+        message: isOk ? `Facture fournisseur #${invoice?.ref || args.id} validée et vérifiée.` : `Validation soumise pour la facture #${args.id}.`,
+      }, null, 2);
     }
     case 'pay_supplier_invoice': {
       const datepaye = Math.floor(new Date(args.datepaye as string).getTime() / 1000);
@@ -44,7 +69,16 @@ export async function handleSupplierInvoiceTool(name: string, args: Record<strin
       const amount = args.amount || (invoice.total_ttc as number);
       const payload = { datepaye, paiementid: args.payment_mode_id, accountid: args.accountid, comment: args.comment || '', amounts: { [args.id as string]: amount } };
       const payId = await api.post('/supplierinvoices/paymentsdistributed', payload);
-      return `✅ Paiement de ${amount} FCFA enregistré sur la facture fournisseur #${args.id}. ID: ${payId}`;
+      const reread = await api.get<Record<string, unknown>>(`/supplierinvoices/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        payment_id: payId,
+        invoice_id: args.id,
+        amount,
+        statut: reread?.statut,
+        remaintopay: reread?.remaintopay,
+      }, null, 2);
     }
     default: throw new Error(`Outil inconnu: ${name}`);
   }

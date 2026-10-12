@@ -282,30 +282,66 @@ export async function handleAccountingConfigTool(name: string, args: Record<stri
 
     if (args.journal_code) {
       const code = String(args.journal_code).trim().toUpperCase();
-      const journals = await api.get<unknown[]>("/accountancy/journals").catch(() => []);
+      const journals = await api.get<unknown[]>("/accountancy/journals", { code }).catch(() => []);
       const jList = Array.isArray(journals) ? (journals as Record<string, unknown>[]) : [];
-      const found = jList.find(j => String(j.code).toUpperCase() === code);
-      if (found) {
+      let found = jList.find(j => String(j.code).toUpperCase() === code);
+      if (!found) {
+        // Créer le journal s'il n'existe pas
+        const newJId = await api.post<number>("/accountancy/journals", {
+          code,
+          label: `Journal ${code}`,
+          nature: 4,
+          active: 1
+        }).catch(() => null);
+        if (newJId) {
+          payload.fk_accountancy_journal = Number(newJId);
+        } else {
+          return JSON.stringify({
+            supported: false,
+            applied: false,
+            error: "JOURNAL_CREATION_FAILED",
+            message: `Impossible de résoudre ou créer le journal comptable '${code}'.`
+          }, null, 2);
+        }
+      } else {
         payload.fk_accountancy_journal = Number(found.id);
       }
     }
 
     await api.put(`/bankaccounts/${accountId}`, payload);
 
-    // Relecture immédiate pour vérification
+    // Relecture immédiate pour vérification stricte
     const reread = await api.get<Record<string, unknown>>(`/bankaccounts/${accountId}`).catch(() => null);
-    const verified = reread && (
-      (!args.accounting_number || String(reread.account_number) === String(args.accounting_number)) &&
-      (!payload.fk_accountancy_journal || Number(reread.fk_accountancy_journal) === Number(payload.fk_accountancy_journal))
-    );
+    if (!reread) {
+      return JSON.stringify({
+        supported: true,
+        applied: false,
+        verified: false,
+        error: "REREAD_FAILED",
+        message: `Échec de relecture du compte bancaire #${accountId} après mise à jour.`
+      }, null, 2);
+    }
+
+    const expectedAccNum = args.accounting_number ? String(args.accounting_number).trim() : undefined;
+    const expectedJCode = args.journal_code ? String(args.journal_code).trim().toUpperCase() : undefined;
+
+    const accNumMatch = !expectedAccNum || String(reread.account_number).trim() === expectedAccNum;
+    const journalMatch = !expectedJCode || String(reread.accountancy_journal || '').toUpperCase() === expectedJCode;
+    const isVerified = accNumMatch && journalMatch;
 
     return JSON.stringify({
-      applied: true,
-      verified: !!verified,
+      applied: isVerified,
+      verified: isVerified,
       account_id: accountId,
-      accounting_number: reread?.account_number,
-      journal_code: reread?.accountancy_journal,
-      fk_accountancy_journal: reread?.fk_accountancy_journal,
+      accounting_number: reread.account_number,
+      journal_code: reread.accountancy_journal,
+      fk_accountancy_journal: reread.fk_accountancy_journal,
+      verification_details: {
+        account_number_verified: accNumMatch,
+        journal_code_verified: journalMatch,
+        expected_journal: expectedJCode,
+        actual_journal: reread.accountancy_journal,
+      },
       bank: reread,
     }, null, 2);
   }
@@ -320,21 +356,31 @@ export async function handleAccountingConfigTool(name: string, args: Record<stri
     const accNum = args.accounting_number ? String(args.accounting_number).trim() : (type === 2 ? "571" : "521");
     const jCode = args.journal_code ? String(args.journal_code).trim().toUpperCase() : (type === 2 ? "CAI" : "BQ");
 
-    // 1. Résolution du journal comptable
+    // 1. Résolution stricte du journal comptable
     let journalId: number | undefined;
-    const journals = await api.get<unknown[]>("/accountancy/journals").catch(() => []);
+    const journals = await api.get<unknown[]>("/accountancy/journals", { code: jCode }).catch(() => []);
     const jList = Array.isArray(journals) ? (journals as Record<string, unknown>[]) : [];
     const matchedJournal = jList.find(j => String(j.code).toUpperCase() === jCode);
     if (matchedJournal) {
       journalId = Number(matchedJournal.id);
     } else {
       // Création automatique du journal s'il n'existe pas
-      journalId = await api.post<number>("/accountancy/journals", {
+      const createdId = await api.post<number>("/accountancy/journals", {
         code: jCode,
         label: type === 2 ? "Journal Caisse" : `Journal Banque ${bankName}`,
         nature: type === 2 ? 1 : 4,
         active: 1
-      }).catch(() => undefined);
+      }).catch(() => null);
+      if (createdId) {
+        journalId = Number(createdId);
+      } else {
+        return JSON.stringify({
+          supported: false,
+          applied: false,
+          error: "JOURNAL_CREATION_FAILED",
+          message: `Impossible de créer le journal comptable requis '${jCode}'. Opération interrompue.`
+        }, null, 2);
+      }
     }
 
     // 2. Vérification/résolution du compte comptable dans SYSCOHADA
@@ -349,37 +395,60 @@ export async function handleAccountingConfigTool(name: string, args: Record<stri
       }).catch(() => null);
     }
 
-    // 3. Création du compte bancaire
+    // 3. Création du compte bancaire (ref max 12 chars dans Dolibarr)
+    const cleanRef = ref.length > 12 ? ref.substring(0, 12) : ref;
     const bankPayload: Record<string, unknown> = {
-      ref,
+      ref: cleanRef,
       label,
       bank: bankName,
       type,
       currency_code: currency,
       country_id: countryId,
-      number: args.number ? String(args.number).trim() : ref,
+      number: args.number ? String(args.number).trim() : cleanRef,
       iban: args.iban ? String(args.iban).trim() : "",
       bic: args.bic ? String(args.bic).trim() : "",
       account_number: accNum,
-      fk_accountancy_journal: journalId || 3,
+      fk_accountancy_journal: journalId,
     };
 
     const newId = await api.post<number>("/bankaccounts", bankPayload);
 
-    // 4. Relecture immédiate pour vérification
+    // 4. Relecture immédiate pour vérification stricte
     const reread = await api.get<Record<string, unknown>>(`/bankaccounts/${newId}`).catch(() => null);
+    if (!reread) {
+      return JSON.stringify({
+        supported: true,
+        applied: false,
+        verified: false,
+        error: "REREAD_FAILED",
+        account_id: newId,
+        message: `Compte bancaire #${newId} créé mais impossible de le relire pour confirmation.`
+      }, null, 2);
+    }
+
+    const journalVerified = String(reread.accountancy_journal || '').toUpperCase() === jCode;
+    const accNumVerified = String(reread.account_number || '').trim() === accNum;
+    const isSuccess = journalVerified && accNumVerified;
 
     return JSON.stringify({
-      applied: true,
-      verified: !!reread,
+      applied: isSuccess,
+      verified: isSuccess,
       account_id: newId,
-      ref,
+      ref: cleanRef,
       label,
       bank_name: bankName,
-      accounting_number: reread?.account_number || accNum,
-      journal_code: reread?.accountancy_journal || jCode,
-      fk_accountancy_journal: reread?.fk_accountancy_journal || journalId,
-      details: reread || bankPayload,
+      accounting_number: reread.account_number,
+      journal_code: reread.accountancy_journal,
+      fk_accountancy_journal: reread.fk_accountancy_journal,
+      verification_details: {
+        expected_journal: jCode,
+        actual_journal: reread.accountancy_journal,
+        journal_verified: journalVerified,
+        expected_accounting_number: accNum,
+        actual_accounting_number: reread.account_number,
+        accounting_number_verified: accNumVerified,
+      },
+      details: reread,
     }, null, 2);
   }
 
