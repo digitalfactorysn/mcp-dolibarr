@@ -1,5 +1,5 @@
 /**
- * src/server.ts — MCP Dolibarr v5.0 — COMPLET 100%
+ * src/server.ts — MCP Dolibarr v5.2.0 — COMPLET 100% + FONCTIONNALITÉS AVANCÉES
  * Digital Factory Senegal — https://digitalfactory.sn
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -30,8 +30,10 @@ import { mailingTools, resourceTools, handleMailingTool, handleResourceTool } fr
 import { donationTools, loanTools, handleDonationTool, handleLoanTool } from "./tools/donations_loans.js";
 import { expenseReportTools, handleExpenseReportTool } from "./tools/expense_reports.js";
 import { accountingAdvancedTools, handleAccountingAdvancedTool } from "./tools/accounting_advanced.js";
+import { accountingConfigTools, handleAccountingConfigTool } from "./tools/accounting_config.js";
 import { pricingTools, handlePricingTool } from "./tools/pricing.js";
 import { notificationTools, handleNotificationTool } from "./tools/notifications.js";
+import { advancedFeatureTools, handleAdvancedFeatureTool } from "./tools/advanced_features.js";
 
 dotenv.config();
 
@@ -49,8 +51,10 @@ const ALL_TOOLS = [
   ...donationTools, ...loanTools,
   ...expenseReportTools,
   ...accountingAdvancedTools,
+  ...accountingConfigTools,
   ...pricingTools,
   ...notificationTools,
+  ...advancedFeatureTools,
 ];
 
 async function routeTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -85,8 +89,10 @@ async function routeTool(name: string, args: Record<string, unknown>, api: Dolib
     { tools: loanTools, h: handleLoanTool },
     { tools: expenseReportTools, h: handleExpenseReportTool },
     { tools: accountingAdvancedTools, h: handleAccountingAdvancedTool },
+    { tools: accountingConfigTools, h: handleAccountingConfigTool },
     { tools: pricingTools, h: handlePricingTool },
     { tools: notificationTools, h: handleNotificationTool },
+    { tools: advancedFeatureTools, h: handleAdvancedFeatureTool },
   ];
   for (const { tools, h } of sets) {
     if (tools.map(t => t.name).includes(name)) return h(name, args, api);
@@ -99,7 +105,7 @@ export function createServer(): Server {
   const DOLIBARR_API_KEY = process.env.DOLIBARR_API_KEY;
   if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
   const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
-  const server = new Server({ name: "mcp-dolibarr", version: "5.0.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "mcp-dolibarr", version: "5.2.0" }, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args } = req.params;

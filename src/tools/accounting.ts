@@ -119,16 +119,30 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         if (args.type) params.type = args.type;
         const data = await api.get('/accountancy/account', params);
         return JSON.stringify(data, null, 2);
-      } catch (_e) {
-        return JSON.stringify({ note: 'Plan comptable SYSCOHADA non initialisé.', action: 'Dolibarr → Comptabilité → Configuration → Charger plan comptable SYSCOHADA', comptes_standards: [{ num: '411', label: 'Clients' }, { num: '401', label: 'Fournisseurs' }, { num: '521', label: 'Banque ECOBANK' }, { num: '706', label: 'Prestations de services' }, { num: '4431', label: 'TVA collectée' }, { num: '4452', label: 'TVA déductible' }] }, null, 2);
+      } catch (err) {
+        return JSON.stringify({
+          supported: false,
+          error: 'REST_ENDPOINT_NOT_AVAILABLE',
+          endpoint: '/accountancy/account',
+          message: "L'endpoint REST pour le plan comptable n'est pas exposé par cette version de Dolibarr.",
+          details: err instanceof Error ? err.message : String(err),
+          action_requise: "Consulter directement le plan comptable via l'interface web Dolibarr (Comptabilité → Configuration → Plan comptable)."
+        }, null, 2);
       }
     }
     case 'list_accounting_journals': {
       try {
         const data = await api.get('/accountancy/journal');
         return JSON.stringify(data, null, 2);
-      } catch (_e) {
-        return JSON.stringify([{ code: 'VTE', label: 'Journal des ventes' }, { code: 'ACH', label: 'Journal des achats' }, { code: 'BNQ', label: 'Journal de banque' }, { code: 'CAI', label: 'Journal de caisse' }, { code: 'OD', label: 'Opérations diverses' }], null, 2);
+      } catch (err) {
+        return JSON.stringify({
+          supported: false,
+          error: 'REST_ENDPOINT_NOT_AVAILABLE',
+          endpoint: '/accountancy/journal',
+          message: "L'endpoint REST pour les journaux comptables n'est pas exposé par cette version de Dolibarr.",
+          details: err instanceof Error ? err.message : String(err),
+          action_requise: "Consulter les journaux via l'interface web Dolibarr (Comptabilité → Configuration → Journaux)."
+        }, null, 2);
       }
     }
     case 'list_accounting_entries': {
@@ -139,32 +153,50 @@ Compte: #${args.account_id} | Montant: ${args.amount}`;
         if (args.date_end) params.date_end = Math.floor(new Date(args.date_end as string).getTime() / 1000);
         const data = await api.get('/accountancy/bookkeeping', params);
         return JSON.stringify(data, null, 2);
-      } catch (_e) {
-        return JSON.stringify({ note: 'Plan comptable SYSCOHADA non initialisé. Écritures non disponibles.', action: 'Dolibarr → Comptabilité → Configuration → Charger plan comptable' }, null, 2);
+      } catch (err) {
+        return JSON.stringify({
+          supported: false,
+          error: 'REST_ENDPOINT_NOT_AVAILABLE',
+          endpoint: '/accountancy/bookkeeping',
+          message: "L'endpoint REST pour le grand livre comptable n'est pas exposé par cette version de Dolibarr.",
+          details: err instanceof Error ? err.message : String(err),
+          alternative: "Utiliser l'export comptable officiel ou l'accès web direct (Comptabilité → Grand Livre)."
+        }, null, 2);
       }
     }
     case 'get_financial_summary': {
-      const year = args.year || new Date().getFullYear();
-      const startTs = Math.floor(new Date(`${year}-01-01`).getTime() / 1000);
-      const endTs = Math.floor(new Date(`${year}-12-31`).getTime() / 1000);
+      const year = Number(args.year) || new Date().getFullYear();
 
-      // Factures validées de l'année
-      const [paidInvoices, unpaidInvoices, bankAccounts] = await Promise.all([
-        api.get<unknown[]>('/invoices', { status: 2, limit: 500, datestart: startTs, dateend: endTs }),
-        api.get<unknown[]>('/invoices', { status: 1, limit: 500 }),
+      // Récupérer toutes les factures + comptes bancaires
+      const [allInvoices, bankAccounts] = await Promise.all([
+        api.get<unknown[]>('/invoices', { limit: 500 }),
         api.get<unknown[]>('/bankaccounts', { status: 1 }),
       ]);
 
-      const paidArr = Array.isArray(paidInvoices) ? paidInvoices : [];
-      const unpaidArr = Array.isArray(unpaidInvoices) ? unpaidInvoices : [];
-      const bankArr = Array.isArray(bankAccounts) ? bankAccounts : [];
+      const allArr   = Array.isArray(allInvoices) ? allInvoices as Record<string, unknown>[] : [];
+      const bankArr  = Array.isArray(bankAccounts) ? bankAccounts as Record<string, unknown>[] : [];
 
-      const totalCA = paidArr.reduce((s: number, inv: unknown) => s + Number((inv as Record<string, number>).total_ttc || 0), 0);
-      const totalUnpaid = unpaidArr.reduce((s: number, inv: unknown) => s + Number((inv as Record<string, number>).total_ttc || 0), 0);
-      const totalBalance = bankArr.reduce((s: number, acc: unknown) => s + Number((acc as Record<string, number>).balance || 0), 0);
+      // Filtrer par année via le champ date (timestamp)
+      const yearStart = Math.floor(new Date(`${year}-01-01`).getTime() / 1000);
+      const yearEnd   = Math.floor(new Date(`${year}-12-31T23:59:59`).getTime() / 1000);
+
+      const yearArr = allArr.filter(inv => {
+        const d = Number(inv.date || 0);
+        return d >= yearStart && d <= yearEnd;
+      });
+
+      // Séparation payées / impayées par champ paye
+      const paidArr   = yearArr.filter(inv => String(inv.paye) === '1' || String(inv.statut) === '2');
+      const unpaidArr = yearArr.filter(inv => String(inv.paye) === '0' && (String(inv.statut) === '1' || String(inv.statut) === '2'));
+
+      const totalCA      = paidArr.reduce((s, inv) => s + Number(inv.total_ttc || 0), 0);
+      const totalUnpaid  = unpaidArr.reduce((s, inv) => s + Number(inv.remaintopay || inv.total_ttc || 0), 0);
+      const totalBalance = bankArr.reduce((s, acc) => s + Number(acc.balance || 0), 0);
 
       return JSON.stringify({
         annee: year,
+        reconstituted: true,
+        source: 'Calculé à partir des factures (/invoices) et comptes bancaires (/bankaccounts)',
         chiffre_affaires_TTC: Number(totalCA).toFixed(2),
         nb_factures_payees: paidArr.length,
         total_factures_impayees_TTC: Number(totalUnpaid).toFixed(2),

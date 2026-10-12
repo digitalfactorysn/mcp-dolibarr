@@ -6,14 +6,11 @@ type R = Record<string, unknown>;
 export const accountingAdvancedTools: Tool[] = [
   { name: 'get_customer_statement', description: "Relevé de compte complet d'un client (factures, paiements, solde)", inputSchema: { type: 'object', properties: { thirdparty_id: { type: 'number' }, date_start: { type: 'string' }, date_end: { type: 'string' } }, required: ['thirdparty_id'] } },
   { name: 'get_vat_report', description: "Rapport de déclaration TVA pour une période (collectée vs déductible)", inputSchema: { type: 'object', properties: { year: { type: 'number' }, month: { type: 'number', description: 'Mois 1-12 (si vide = année entière)' } }, required: ['year'] } },
-  { name: 'reconcile_bank_line', description: "Marquer une ligne bancaire comme rapprochée", inputSchema: { type: 'object', properties: { account_id: { type: 'number' }, line_id: { type: 'number' }, num_releve: { type: 'string', description: "Numéro de relevé (ex: '2025-01')" } }, required: ['account_id', 'line_id', 'num_releve'] } },
+  { name: 'reconcile_bank_line', description: "Vérifier et rapprocher une ligne bancaire avec contrôle de relecture effectif", inputSchema: { type: 'object', properties: { account_id: { type: 'number' }, line_id: { type: 'number' }, num_releve: { type: 'string', description: "Numéro de relevé (ex: '2025-01')" }, allow_production_account: { type: 'boolean', description: "Autorisation explicite requise si compte de production" } }, required: ['account_id', 'line_id', 'num_releve'] } },
   { name: 'get_aged_balance', description: "Balance âgée clients par tranche d'ancienneté (0-30j, 31-60j, 61-90j, +90j)", inputSchema: { type: 'object', properties: { type: { type: 'string', description: "'customer' ou 'supplier'" } } } },
   { name: 'export_accounting_entries', description: "Exporter les écritures comptables en CSV. Calcul depuis les factures si plan comptable non initialisé.", inputSchema: { type: 'object', properties: { date_start: { type: 'string' }, date_end: { type: 'string' }, limit: { type: 'number' } }, required: ['date_start', 'date_end'] } },
   { name: 'get_trial_balance', description: "Balance générale des comptes. Calculée depuis les factures si plan comptable non initialisé.", inputSchema: { type: 'object', properties: { date_start: { type: 'string' }, date_end: { type: 'string' } } } },
   { name: 'create_misc_journal_entry', description: "Créer une écriture comptable manuelle (OD). Nécessite le plan comptable initialisé.", inputSchema: { type: 'object', properties: { label: { type: 'string' }, journal_code: { type: 'string' }, date: { type: 'string' }, lines: { type: 'array', items: { type: 'object' } } }, required: ['label', 'journal_code', 'date', 'lines'] } },
-  { name: 'list_accounting_accounts', description: "Lister les comptes du plan comptable SYSCOHADA. Retourne les comptes standards si non initialisé.", inputSchema: { type: 'object', properties: { limit: { type: 'number' } } } },
-  { name: 'list_accounting_journals', description: "Lister les journaux comptables (Ventes, Achats, Banque, OD...)", inputSchema: { type: 'object', properties: {} } },
-  { name: 'list_accounting_entries', description: "Lister les écritures comptables du grand livre", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, date_start: { type: 'string' }, date_end: { type: 'string' } } } },
 ];
 
 // Calcule une balance depuis les factures (fallback si plan comptable non initialisé)
@@ -102,10 +99,60 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
     }
 
     case 'reconcile_bank_line': {
-      await api.put(`/bankaccounts/${args.account_id}/lines/${args.line_id}`, {
-        num_releve: args.num_releve, rappro: 1
-      });
-      return `✅ Ligne bancaire #${args.line_id} rapprochée (relevé: ${args.num_releve}).`;
+      const accountId = Number(args.account_id);
+      const lineId = Number(args.line_id);
+      const releve = String(args.num_releve || '').replace(/[^a-zA-Z0-9_-]/g, '');
+
+      // Protection compte de production réel
+      if (accountId === 1 && !args.allow_production_account) {
+        return JSON.stringify({
+          supported: false,
+          applied: false,
+          error: 'PRODUCTION_ACCOUNT_PROTECTED',
+          message: 'Refus de modification sur le compte bancaire de production #1 (ECOBANK). Définissez allow_production_account: true pour forcer ou utilisez un compte bancaire de test.',
+        }, null, 2);
+      }
+
+      try {
+        await api.put(`/bankaccounts/${accountId}/lines/${lineId}`, {
+          label: `Reconciliation ${releve}`,
+          num_releve: releve,
+          rappro: 1,
+        });
+
+        // Relecture factuelle de la ligne
+        const rereadLine = await api.get<R>(`/bankaccounts/lines/${lineId}`).catch(() => null);
+        const isRapproApplied = rereadLine && (Number(rereadLine.rappro) === 1 || String(rereadLine.num_releve) === releve);
+
+        if (isRapproApplied) {
+          return JSON.stringify({
+            supported: true,
+            applied: true,
+            account_id: accountId,
+            line_id: lineId,
+            releve,
+            rappro: 1,
+            relecture_verifiee: true,
+            details: rereadLine,
+          }, null, 2);
+        } else {
+          return JSON.stringify({
+            supported: false,
+            applied: false,
+            error: 'API_DOES_NOT_PERSIST_RECONCILIATION',
+            message: "L'API REST Dolibarr standard ne prend pas en charge la mise à jour du champ de rapprochement (rappro=1) via PUT /bankaccounts/{id}/lines/{line_id} (seul 'label' est modifiable via cette route).",
+            line_relecture: rereadLine,
+            action_requise: "Effectuer le rapprochement bancaire via l'interface web Dolibarr (Banque → Rapprochement).",
+          }, null, 2);
+        }
+      } catch (err) {
+        return JSON.stringify({
+          supported: false,
+          applied: false,
+          error: 'API_ERROR',
+          message: err instanceof Error ? err.message : String(err),
+        }, null, 2);
+      }
     }
 
     case 'get_aged_balance': {
@@ -195,67 +242,27 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
     }
 
     case 'create_misc_journal_entry': {
-      const date = Math.floor(new Date(args.date as string).getTime() / 1000);
-      const id = await api.post('/accountancy/bookkeeping', {
-        label: args.label, code_journal: args.journal_code, doc_date: date, lines: args.lines
-      });
-      return `✅ Écriture OD créée. ID: ${id}\nJournal: ${args.journal_code} | ${args.label}`;
-    }
-
-    case 'list_accounting_accounts': {
       try {
-        const data = await api.get<unknown[]>('/accountancy/account', { limit: args.limit || 100 });
-        return JSON.stringify(data, null, 2);
-      } catch {
-        // Fallback: comptes SYSCOHADA standards
+        const date = Math.floor(new Date(args.date as string).getTime() / 1000);
+        const id = await api.post('/accountancy/bookkeeping', {
+          label: args.label, code_journal: args.journal_code, doc_date: date, lines: args.lines
+        });
         return JSON.stringify({
-          note: 'Plan comptable SYSCOHADA non encore initialisé. Comptes standards retournés.',
-          lien_initialisation: 'Dolibarr → Comptabilité → Configuration → Charger plan comptable',
-          comptes_principaux: [
-            { num: '101', label: 'Capital' }, { num: '161', label: 'Emprunts' },
-            { num: '211', label: 'Immobilisations corporelles' }, { num: '411', label: 'Clients' },
-            { num: '401', label: 'Fournisseurs' }, { num: '521', label: 'Banque' },
-            { num: '571', label: 'Caisse' }, { num: '601', label: 'Achats marchandises' },
-            { num: '706', label: 'Prestations de services' }, { num: '707', label: 'Ventes marchandises' },
-            { num: '4431', label: 'TVA collectée' }, { num: '4452', label: 'TVA déductible' },
-            { num: '6411', label: 'Salaires et traitements' }, { num: '6441', label: 'Charges sociales' },
-          ]
+          supported: true,
+          applied: true,
+          entry_id: id,
+          journal: args.journal_code,
+          label: args.label,
         }, null, 2);
-      }
-    }
-
-    case 'list_accounting_journals': {
-      try {
-        const data = await api.get<unknown[]>('/accountancy/journal');
-        return JSON.stringify(data, null, 2);
-      } catch {
+      } catch (err) {
         return JSON.stringify({
-          note: 'Plan comptable SYSCOHADA non encore initialisé. Journaux standards retournés.',
-          journaux: [
-            { code: 'VTE', label: 'Journal des ventes' },
-            { code: 'ACH', label: 'Journal des achats' },
-            { code: 'BNQ', label: 'Journal de banque' },
-            { code: 'CAI', label: 'Journal de caisse' },
-            { code: 'OD',  label: 'Opérations diverses' },
-            { code: 'ANO', label: 'À-nouveaux' },
-          ]
-        }, null, 2);
-      }
-    }
-
-    case 'list_accounting_entries': {
-      try {
-        const params: R = { limit: args.limit || 100 };
-        if (args.date_start) params.datestart = Math.floor(new Date(args.date_start as string).getTime() / 1000);
-        if (args.date_end)   params.dateend   = Math.floor(new Date(args.date_end   as string).getTime() / 1000);
-        const data = await api.get<unknown[]>('/accountancy/bookkeeping', params);
-        return JSON.stringify(data, null, 2);
-      } catch {
-        const entries = await computeBalanceFromInvoices(api, args.date_start as string, args.date_end as string);
-        return JSON.stringify({
-          note: 'Plan comptable non initialisé. Écritures calculées depuis les factures.',
-          nb_ecritures: entries.length,
-          ecritures: entries.slice(0, Number(args.limit) || 100),
+          supported: false,
+          applied: false,
+          error: 'REST_ENDPOINT_NOT_AVAILABLE',
+          endpoint: '/accountancy/bookkeeping',
+          message: "L'endpoint POST /accountancy/bookkeeping n'est pas exposé dans cette version de Dolibarr pour créer des écritures de journal.",
+          details: err instanceof Error ? err.message : String(err),
+          action_requise: "Saisir les écritures OD manuellement via l'interface Dolibarr (Comptabilité → Grand Livre → Nouvelle écriture).",
         }, null, 2);
       }
     }

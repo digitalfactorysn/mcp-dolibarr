@@ -26,7 +26,7 @@ export async function handleSupplierInvoiceTool(name: string, args: Record<strin
     }
     case 'create_supplier_invoice': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/supplierinvoices', { ...args, date });
+      const id = await api.post('/supplierinvoices', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
       return `✅ Facture fournisseur créée. ID: ${id}`;
     }
     case 'add_supplier_invoice_line': {

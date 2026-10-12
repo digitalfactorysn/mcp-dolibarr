@@ -26,7 +26,7 @@ export async function handleInterventionTool(name: string, args: Record<string, 
     }
     case 'create_intervention': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/interventions', { ...args, date });
+      const id = await api.post('/interventions', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
       return `✅ Fiche d'intervention créée. ID: ${id}`;
     }
     case 'add_intervention_line': {
