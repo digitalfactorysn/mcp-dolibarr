@@ -34,6 +34,12 @@ import { accountingConfigTools, handleAccountingConfigTool } from "./tools/accou
 import { pricingTools, handlePricingTool } from "./tools/pricing.js";
 import { notificationTools, handleNotificationTool } from "./tools/notifications.js";
 import { advancedFeatureTools, handleAdvancedFeatureTool } from "./tools/advanced_features.js";
+import { accountingAdvancedOpsTools, handleAccountingAdvancedOpsTool } from "./tools/accounting_advanced_ops.js";
+import { workflowAndCronTools, handleWorkflowAndCronTool } from "./tools/workflows_and_cron.js";
+import { contractsProjectsOpsTools, handleContractsProjectsOpsTool } from "./tools/contracts_projects_ops.js";
+import { documentsExtrafieldsOpsTools, handleDocumentsExtrafieldsOpsTool } from "./tools/documents_extrafields_ops.js";
+import { adminOpsTools, handleAdminOpsTool } from "./tools/admin_ops.js";
+import { payrollSenegalTools, handlePayrollSenegalTool } from "./tools/payroll_senegal.js";
 
 dotenv.config();
 
@@ -55,6 +61,12 @@ const ALL_TOOLS = [
   ...pricingTools,
   ...notificationTools,
   ...advancedFeatureTools,
+  ...accountingAdvancedOpsTools,
+  ...workflowAndCronTools,
+  ...contractsProjectsOpsTools,
+  ...documentsExtrafieldsOpsTools,
+  ...adminOpsTools,
+  ...payrollSenegalTools,
 ];
 
 async function routeTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -93,6 +105,12 @@ async function routeTool(name: string, args: Record<string, unknown>, api: Dolib
     { tools: pricingTools, h: handlePricingTool },
     { tools: notificationTools, h: handleNotificationTool },
     { tools: advancedFeatureTools, h: handleAdvancedFeatureTool },
+    { tools: accountingAdvancedOpsTools, h: handleAccountingAdvancedOpsTool },
+    { tools: workflowAndCronTools, h: handleWorkflowAndCronTool },
+    { tools: contractsProjectsOpsTools, h: handleContractsProjectsOpsTool },
+    { tools: documentsExtrafieldsOpsTools, h: handleDocumentsExtrafieldsOpsTool },
+    { tools: adminOpsTools, h: handleAdminOpsTool },
+    { tools: payrollSenegalTools, h: handlePayrollSenegalTool },
   ];
   for (const { tools, h } of sets) {
     if (tools.map(t => t.name).includes(name)) return h(name, args, api);
@@ -105,7 +123,7 @@ export function createServer(): Server {
   const DOLIBARR_API_KEY = process.env.DOLIBARR_API_KEY;
   if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
   const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
-  const server = new Server({ name: "mcp-dolibarr", version: "5.4.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "mcp-dolibarr", version: "6.0.0" }, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args } = req.params;
