@@ -5,7 +5,7 @@ export const interventionTools: Tool[] = [
   { name: 'list_interventions', description: "Lister les fiches d'intervention. Statut: 0=Brouillon, 1=Validée, 2=Facturée, 3=Abandonnée", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, page: { type: 'number' }, status: { type: 'number' }, thirdparty_id: { type: 'number' }, sqlfilters: { type: 'string' } } } },
   { name: 'get_intervention', description: "Obtenir les détails d'une fiche d'intervention", inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
   { name: 'create_intervention', description: "Créer une fiche d'intervention", inputSchema: { type: 'object', properties: { socid: { type: 'number', description: 'ID du client' }, ref: { type: 'string', description: 'Référence (auto si vide)' }, description: { type: 'string', description: "Description de l'intervention" }, date: { type: 'string', description: 'Date ISO 8601' }, duree: { type: 'number', description: 'Durée en secondes' }, fk_project: { type: 'number', description: 'ID projet lié' }, note_public: { type: 'string' }, note_private: { type: 'string' } }, required: ['socid'] } },
-  { name: 'add_intervention_line', description: "Ajouter une ligne de temps à une fiche d'intervention", inputSchema: { type: 'object', properties: { id: { type: 'number', description: "ID de la fiche d'intervention" }, date: { type: 'string', description: 'Date ISO 8601' }, desc: { type: 'string', description: 'Description de la prestation' }, duree: { type: 'number', description: 'Durée en secondes (ex: 3600 = 1h)' }, subprice: { type: 'number', description: 'Prix unitaire HT/heure' }, qty: { type: 'number', description: 'Quantité (heures)' }, tva_tx: { type: 'number', description: 'Taux TVA %' }, fk_product: { type: 'number' } }, required: ['id', 'desc', 'duree'] } },
+  { name: 'add_intervention_line', description: "Ajouter une ligne de temps (description, date, durée) à une fiche d'intervention. Dolibarr ne gère ni produit ni prix sur ces lignes.", inputSchema: { type: 'object', properties: { id: { type: 'number', description: "ID de la fiche d'intervention" }, date: { type: 'string', description: 'Date ISO 8601' }, desc: { type: 'string', description: 'Description de la prestation' }, duree: { type: 'number', description: 'Durée en secondes (ex: 3600 = 1h)' } }, required: ['id', 'desc', 'duree'] } },
   { name: 'validate_intervention', description: "Valider une fiche d'intervention brouillon", inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
   { name: 'close_intervention', description: "Clôturer/facturer une fiche d'intervention", inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
 ];
@@ -56,19 +56,16 @@ export async function handleInterventionTool(name: string, args: Record<string, 
         duration: duration,
         date: dateTs,
       };
-      if (args.subprice !== undefined) payload.subprice = Number(args.subprice);
-      if (args.qty !== undefined) payload.qty = Number(args.qty);
-      if (args.tva_tx !== undefined) payload.tva_tx = Number(args.tva_tx);
-      if (args.fk_product !== undefined) payload.fk_product = Number(args.fk_product);
 
       const lineId = await api.post(`/interventions/${id}/lines`, payload);
       const intervention = await api.get<Record<string, unknown>>(`/interventions/${id}`).catch(() => null);
       const lines = Array.isArray(intervention?.lines) ? (intervention.lines as Record<string, unknown>[]) : [];
-      const createdLine = lines.find(l => String(l.id) === String(lineId)) || (lines.length > 0 ? lines[lines.length - 1] : null);
+      const createdLine = lines.find(l => String(l.id) === String(lineId));
+      const lineOk = !!createdLine && Number(createdLine.duration) === duration && String(createdLine.desc || createdLine.description || '') === desc;
 
       return JSON.stringify({
         applied: true,
-        verified: !!createdLine,
+        verified: lineOk,
         intervention_id: id,
         line_id: lineId,
         description: desc,

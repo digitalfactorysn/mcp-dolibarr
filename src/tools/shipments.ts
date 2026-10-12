@@ -105,30 +105,49 @@ export async function handleShipmentTool(name: string, args: Record<string, unkn
         shipment: created,
       }, null, 2);
     }
-    case 'validate_shipment': {
-      await api.post(`/shipments/${args.id}/validate`, { notrigger: 0 });
-      const check = await api.get<any>(`/shipments/${args.id}`).catch(() => null);
-      const isValid = check && String(check.statut) === '1';
-      return JSON.stringify({
-        applied: true,
-        verified: !!isValid,
-        id: args.id,
-        ref: check?.ref,
-        statut: check?.statut,
-        message: isValid ? `Expédition #${check?.ref || args.id} validée.` : `Validation demandée pour l'expédition #${args.id}.`,
-      }, null, 2);
-    }
+    case 'validate_shipment':
     case 'deliver_shipment': {
-      await api.post(`/shipments/${args.id}/close`, { notrigger: 0 });
-      const check = await api.get<any>(`/shipments/${args.id}`).catch(() => null);
-      const isDelivered = check && (String(check.statut) === '2' || String(check.status) === '2');
+      const id = Number(args.id);
+      const isValidate = name === 'validate_shipment';
+      const closeMode = String(await api.get<any>('/setup/conf/STOCK_CALCULATE_ON_SHIPMENT_CLOSE').catch(() => '0')) === '1';
+      const stockMode = closeMode ? 'on_close' : 'on_validate';
+      const expectDecrement = isValidate ? !closeMode : closeMode;
+      const before = await api.get<any>(`/shipments/${id}`);
+      const productQty: Record<string, number> = {};
+      for (const l of (before?.lines || [])) {
+        if (l.fk_product && String(l.product_type) === '0') productQty[l.fk_product] = (productQty[l.fk_product] || 0) + Number(l.qty_shipped || l.qty || 0);
+      }
+      const readStock = async () => {
+        const r: Record<string, number> = {};
+        for (const pid of Object.keys(productQty)) {
+          const prod = await api.get<any>(`/products/${pid}`).catch(() => null);
+          r[pid] = Number(prod?.stock_reel || 0);
+        }
+        return r;
+      };
+      const stockBefore = await readStock();
+      if (isValidate) await api.post(`/shipments/${id}/validate`, { notrigger: 0 });
+      else await api.post(`/shipments/${id}/close`, { notrigger: 0 });
+      const check = await api.get<any>(`/shipments/${id}`).catch(() => null);
+      const stockAfter = await readStock();
+      const stock_checks = Object.keys(productQty).map(pid => {
+        const delta = stockAfter[pid] - stockBefore[pid];
+        const expected = expectDecrement ? -productQty[pid] : 0;
+        return { product_id: Number(pid), qty: productQty[pid], stock_before: stockBefore[pid], stock_after: stockAfter[pid], delta, expected_delta: expected, ok: delta === expected };
+      });
+      const statusOk = isValidate ? String(check?.statut) === '1' : String(check?.statut) === '2';
+      const stockOk = stock_checks.every(c => c.ok);
       return JSON.stringify({
         applied: true,
-        verified: !!isDelivered,
-        id: args.id,
-        ref: check?.ref,
-        statut: check?.statut,
-        message: isDelivered ? `Expédition #${check?.ref || args.id} marquée comme livrée (clôturée).` : `Clôture demandée pour l'expédition #${args.id}.`,
+        verified: statusOk && stockOk,
+        id, ref: check?.ref, statut: check?.statut,
+        stock_mode: stockMode,
+        stock_decrement_expected_now: expectDecrement,
+        stock_checks,
+        message: !statusOk ? `Statut attendu non atteint (statut=${check?.statut}).`
+          : !stockOk ? `Statut OK mais mouvement de stock incohérent avec le mode ${stockMode}.`
+          : expectDecrement ? `Statut OK et stock décrémenté.`
+          : `Statut OK. Stock NON décrémenté à cette étape : Dolibarr est configuré pour décrémenter à la clôture (deliver_shipment).`,
       }, null, 2);
     }
     case 'list_receptions': {

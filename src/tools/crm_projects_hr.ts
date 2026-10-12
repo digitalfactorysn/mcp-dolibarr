@@ -195,8 +195,6 @@ export const contractTools: Tool[] = [
         date_contrat: { type: 'number', description: 'Timestamp unix du contrat (optionnel)' },
         commercial_signature_id: { type: 'number', description: 'ID du commercial signature (défaut: 1)' },
         commercial_suivi_id: { type: 'number', description: 'ID du commercial suivi (défaut: 1)' },
-        date_start: { type: 'string', description: 'Date de début de service ISO 8601' },
-        date_end: { type: 'string', description: "Date de fin de contrat ISO 8601" },
         note_public: { type: 'string', description: 'Description / objet du contrat' },
       },
       required: ['socid'],
@@ -373,8 +371,6 @@ export async function handleContractTool(name: string, args: Record<string, unkn
         dateContratTs = Math.floor(Date.now() / 1000);
       }
 
-      const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
-      const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
       const commercialSignatureId = Number(args.commercial_signature_id) || 1;
       const commercialSuiviId = Number(args.commercial_suivi_id) || 1;
 
@@ -388,8 +384,6 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       if (args.note_private) payload.note_private = args.note_private;
       if (args.ref_customer) payload.ref_customer = args.ref_customer;
       if (args.ref_supplier) payload.ref_supplier = args.ref_supplier;
-      if (date_start) payload.date_start = date_start;
-      if (date_end) payload.date_end = date_end;
 
       const id = await api.post<number>('/contracts', payload);
       const contract = await api.get<Record<string, unknown>>(`/contracts/${id}`).catch(() => null);

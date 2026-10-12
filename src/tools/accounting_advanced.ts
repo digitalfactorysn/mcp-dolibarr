@@ -79,18 +79,21 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
       const dsTs = Math.floor(new Date(ds).getTime() / 1000);
       const deTs = Math.floor(new Date(de).getTime() / 1000);
       const [sales, purch] = await Promise.all([
-        api.get<unknown[]>('/invoices', { status: 2, limit: 500, datestart: dsTs, dateend: deTs }),
-        api.get<unknown[]>('/supplierinvoices', { status: 2, limit: 500, datestart: dsTs, dateend: deTs }),
+        api.get<unknown[]>('/invoices', { limit: 500, datestart: dsTs, dateend: deTs }),
+        api.get<unknown[]>('/supplierinvoices', { limit: 500, datestart: dsTs, dateend: deTs }),
       ]);
       const rawS = (Array.isArray(sales) ? sales : []) as R[];
       const rawP = (Array.isArray(purch) ? purch : []) as R[];
 
       // Filter in memory to ensure period accuracy even if Dolibarr ignores datestart/dateend
+      const okStatus = (i: R) => ['1', '2'].includes(String(i.statut ?? i.status)) || String(i.paye) === '1';
       const s = rawS.filter(i => {
+        if (!okStatus(i)) return false;
         const d = Number(i.date || i.date_validation || i.date_creation || 0);
         return d >= dsTs && d <= deTs;
       });
       const p = rawP.filter(i => {
+        if (!okStatus(i)) return false;
         const d = Number(i.date || i.date_validation || i.date_creation || 0);
         return d >= dsTs && d <= deTs;
       });
@@ -102,7 +105,7 @@ export async function handleAccountingAdvancedTool(name: string, args: R, api: D
         certified: false,
         reconstituted: true,
         source: 'ESTIMATION_FACTURES_COMMERCIALES',
-        disclaimer: 'Estimation calculée à partir des factures commerciales payées/validées. Ne constitue pas un extrait certifié du grand livre comptable.',
+        disclaimer: 'Estimation calculée à partir des factures validées (statut 1) ou payées (statut 2) ; brouillons (0) et abandonnées (3) exclus. Ne constitue pas un extrait certifié du grand livre comptable.',
         TVA_collectee_FCFA: tvaC.toFixed(2),
         TVA_deductible_FCFA: tvaD.toFixed(2),
         TVA_nette_a_payer_FCFA: (tvaC - tvaD).toFixed(2),
