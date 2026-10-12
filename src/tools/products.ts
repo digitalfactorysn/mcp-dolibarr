@@ -117,6 +117,8 @@ export async function handleProductTool(name: string, args: Record<string, unkno
         status: 1,
         status_buy: 1,
         tva_tx: 18,
+        barcode_type: args.barcode_type !== undefined ? args.barcode_type : 4,
+        barcode: args.barcode !== undefined ? args.barcode : -1,
         ...args,
       };
       const id = await api.post<number>('/products', payload);
