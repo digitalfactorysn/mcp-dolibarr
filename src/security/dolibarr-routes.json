@@ -1,0 +1,7159 @@
+{
+ "generatedFrom": [
+  "23.0.3",
+  "24.0.1"
+ ],
+ "routes": [
+  {
+   "method": "GET",
+   "path": "accountancy/exportdata",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "alreadyexport",
+    "date_max",
+    "date_min",
+    "format",
+    "lettering",
+    "notnotifiedasexport",
+    "period"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "agendaevents",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "user_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "agendaevents",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "agendaevents/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "agendaevents/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "agendaevents/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "bankaccounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "bankaccounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "bankaccounts/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "bankaccounts/transfer",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "amount",
+    "amount_to",
+    "bankaccount_from_id",
+    "bankaccount_to_id",
+    "cheque_number",
+    "date",
+    "description"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "bankaccounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "bankaccounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "bankaccounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "bankaccounts/{}/balance",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "bankaccounts/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "bankaccounts/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "accountancycode",
+    "amount",
+    "category",
+    "cheque_bank",
+    "cheque_number",
+    "cheque_writer",
+    "date",
+    "datev",
+    "label",
+    "num_releve",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "bankaccounts/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "bankaccounts/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "label"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "bankaccounts/{}/lines/{}/links",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "bankaccounts/{}/lines/{}/links",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "label",
+    "type",
+    "url",
+    "url_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "boms",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "boms",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "boms/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "boms/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "boms/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "boms/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "boms/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "boms/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "boms/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "boms/{}/validate",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "categories/object/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "categories/types",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "include_childs"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "categories/{}/objects",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "onlyids",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "categories/{}/objects/{}/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "categories/{}/objects/{}/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "categories/{}/objects/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "categories/{}/objects/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "includecount",
+    "includeroles",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "contacts/email/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includecount",
+    "includeroles"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "contacts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "contacts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includecount",
+    "includeroles"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "contacts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "contacts/{}/categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "contacts/{}/categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "contacts/{}/categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "contacts/{}/createUser",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "contracts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids",
+    "withLines"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "contracts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "contracts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "contracts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "properties",
+    "withLines"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "contracts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "contracts/{}/close",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "contracts/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "contracts/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "contracts/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "contracts/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "PUT",
+   "path": "contracts/{}/lines/{}/activate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "comment",
+    "dateend",
+    "datestart"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "contracts/{}/lines/{}/unactivate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "comment",
+    "datestart"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "contracts/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "documents",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "modulepart",
+    "original_file"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "documents",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "content_type",
+    "id",
+    "limit",
+    "modulepart",
+    "page",
+    "pagination_data",
+    "ref",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "documents/builddoc",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "doctemplate",
+    "langcode",
+    "modulepart",
+    "original_file"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "documents/download",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "modulepart",
+    "original_file"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "documents/upload",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "array_options",
+    "cover",
+    "createdirifnotexists",
+    "filecontent",
+    "fileencoding",
+    "filename",
+    "generateThumbs",
+    "modulepart",
+    "overwriteifexists",
+    "position",
+    "ref",
+    "subdir"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "donations",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "donations",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "donations/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "donations/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "donations/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "donations/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "emailtemplates",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_user",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "emailtemplates",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "emailtemplates/label/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "emailtemplates/label/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "emailtemplates/label/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "emailtemplates/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "emailtemplates/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "emailtemplates/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "eventattendees",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "eventattendees",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "eventattendees/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "eventattendees/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "eventattendees/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "eventattendees/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "eventattendees/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "eventattendees/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "expensereports",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "user_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "expensereports",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "expensereports/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "expensereports/payments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "expensereports/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "expensereports/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "expensereports/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/approve",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/cancel",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "detail",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/deny",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "details",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/line",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "expensereports/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "expensereports/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "expensereports/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "PUT",
+   "path": "expensereports/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/setpaid",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "expensereports/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "holidays",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "user_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "holidays",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "holidays/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "holidays/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "holidays/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "holidays/{}/approve",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "holidays/{}/cancel",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "holidays/{}/refuse",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "detail_refuse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "holidays/{}/reopen",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "holidays/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "interventions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_type",
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "interventions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "interventions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "interventions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list",
+    "ref",
+    "ref_ext"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "interventions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "interventions/{}/close",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "interventions/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "interventions/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "source",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "interventions/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_socpeople",
+    "notrigger",
+    "source",
+    "type_contact"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "interventions/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "interventions/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "interventions/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "interventions/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "interventions/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "status",
+    "thirdparty_ids",
+    "withLines"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "invoices/createfromcontract/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/createfromorder/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "invoices/payments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "num_payment"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/paymentsdistributed",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "accepthigherpayment",
+    "accountid",
+    "arrayofamounts",
+    "chqbank",
+    "chqemetteur",
+    "closepaidinvoices",
+    "comment",
+    "datepaye",
+    "num_payment",
+    "paymentid",
+    "ref_ext"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/ref_ext/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/templates",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "status",
+    "thirdparty_ids",
+    "withLines"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/templates/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "invoices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list",
+    "properties",
+    "withLines"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "invoices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "invoices/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger",
+    "source"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_socpeople",
+    "notrigger",
+    "source",
+    "type_contact"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/{}/discount",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "invoices/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "invoices/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/markAsCreditAvailable",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "invoices/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "accountid",
+    "chqbank",
+    "chqemetteur",
+    "closepaidinvoices",
+    "comment",
+    "datepaye",
+    "num_payment",
+    "paymentid"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/settopaid",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "close_code",
+    "close_note"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/settounpaid",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/usecreditnote/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/usediscount/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "invoices/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "force_number",
+    "idwarehouse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "knowledgemanagement/knowledgerecords",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "knowledgemanagement/knowledgerecords",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "knowledgemanagement/knowledgerecords/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "knowledgemanagement/knowledgerecords/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "knowledgemanagement/knowledgerecords/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "knowledgemanagement/knowledgerecords/{}/categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "knowledgemanagement/{}/cancel",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "knowledgemanagement/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "login",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "entity",
+    "login",
+    "password",
+    "reset"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "login",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "entity",
+    "login",
+    "password",
+    "reset"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "mailings",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_projects",
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "mailings",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "mailings/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "mailings/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "mailings/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "mailings/{}/createTarget",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "mailings/{}/deleteTarget/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "mailings/{}/deleteTargets",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "mailings/{}/getTarget/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "mailings/{}/resetTargetsStatus",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "mailings/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "mailings/{}/targets",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "mailings/{}/updateTarget/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "PUT",
+   "path": "mailings/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "typeid"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "members",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "members/stats/amountbymonth",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "format",
+    "year"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/stats/lastmodifiedmembers",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "max"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/stats/nbbymonth",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "format",
+    "year"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/stats/nbbyyear",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/thirdparty/accounts/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/thirdparty/barcode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/thirdparty/email/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/thirdparty/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "members/types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "members/types/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/types/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "members/types/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "members/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "members/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "members/{}/categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "members/{}/subscriptions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "members/{}/subscriptions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "amount",
+    "end_date",
+    "label",
+    "start_date"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "memberstypes",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "memberstypes",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "memberstypes/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "memberstypes/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "memberstypes/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "mos",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "mos",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "mos/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "mos/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "mos/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "mos/{}/categories",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "mos/{}/produceandconsume",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "mos/{}/produceandconsumeall",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "mos/{}/validate",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "multicurrencies",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "multicurrencies",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "multicurrencies/bycode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "multicurrencies/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "multicurrencies/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "multicurrencies/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "multicurrencies/{}/rates",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "multicurrencies/{}/rates",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "objectlinks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_source",
+    "fk_target",
+    "notrigger",
+    "relationtype",
+    "sourcetype",
+    "targettype"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "objectlinks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_source",
+    "fk_target",
+    "relationtype",
+    "sourcetype",
+    "targettype"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "objectlinks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "objectlinks/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "objectlinks/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilterlines",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "orders/createfromproposal/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/ref_ext/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "orders/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "orders/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/close",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "orders/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger",
+    "source"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "orders/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "properties"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "orders/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/reopen",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/setinvoiced",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "orders/{}/shipment",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/shipment/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "orders/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "paiements",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "paiements/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "paiements/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "paiements/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "partnerships/partnerships",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "partnerships/partnerships",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "partnerships/partnerships/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "partnerships/partnerships/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "partnerships/partnerships/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "productlots",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "user_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "productlots",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "productlots/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "productlots/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "productlots/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "products",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "ids_only",
+    "includestockdata",
+    "limit",
+    "mode",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "variant_filter"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/attributes",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "label",
+    "ref",
+    "ref_ext"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/ref/{}/values",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/ref_ext/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "products/attributes/values/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/values/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "products/attributes/values/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "products/attributes/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "products/attributes/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/{}/values",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/attributes/{}/values",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "ref",
+    "value"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "products/attributes/{}/values/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/attributes/{}/values/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/barcode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includeparentid",
+    "includestockdata",
+    "includesubproducts",
+    "includetrans"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/purchase_prices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "mode",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "supplier"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includeparentid",
+    "includestockdata",
+    "includesubproducts",
+    "includetrans"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/ref/{}/variants",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/ref/{}/variants",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "features",
+    "price_impact",
+    "price_impact_is_percent",
+    "weight_impact"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/ref_ext/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includeparentid",
+    "includestockdata",
+    "includesubproducts",
+    "includetrans"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "products/variants/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "products/variants/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "products/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includeparentid",
+    "includestockdata",
+    "includesubproducts",
+    "includetrans"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "products/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "products/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger",
+    "source"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/purchase_prices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "barcode",
+    "ref",
+    "ref_ext"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/{}/purchase_prices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "availability",
+    "buyprice",
+    "charges",
+    "delivery_time_days",
+    "fourn_id",
+    "localtaxes_array",
+    "newnpr",
+    "price_base_type",
+    "qty",
+    "ref_fourn",
+    "remise",
+    "remise_percent",
+    "supplier_reputation",
+    "tva_tx"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/purchase_prices/logs",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "barcode",
+    "ref",
+    "ref_ext"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "products/{}/purchase_prices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/selling_multiprices/per_customer",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "thirdparty_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/selling_multiprices/per_quantity",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/selling_multiprices/per_segment",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/stock",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "selected_warehouse_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/subproducts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/{}/subproducts/add",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "incdec",
+    "qty",
+    "subproduct_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "products/{}/subproducts/remove/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "products/{}/variants",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includestock"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "products/{}/variants",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "features",
+    "price_impact",
+    "price_impact_is_percent",
+    "ref_ext",
+    "reference",
+    "weight_impact"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "projects",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "projects/alltimespent",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/email_msgid/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/ref_ext/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "projects/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "projects/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "projects/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "projects/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "affect_to_tasks",
+    "fk_socpeople",
+    "notrigger",
+    "source",
+    "type_contact"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/{}/roles",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "userid"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/{}/tasks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includetimespent"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "projects/{}/timespent",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "projects/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "proposals",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "loadlinkedobjects",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "proposals",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "proposals/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "proposals/ref_ext/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "proposals/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "proposals/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "proposals/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/close",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "note_private",
+    "note_public",
+    "notrigger",
+    "status"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "proposals/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/contact/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger",
+    "source"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "proposals/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/line",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "proposals/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "proposals/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "proposals/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/setinvoiced",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "proposals/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "receptions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "receptions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "receptions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "receptions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "receptions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "receptions/{}/close",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "receptions/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "receptions/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "recruitments/candidature",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "recruitments/candidature",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "recruitments/candidature/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "recruitments/candidature/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "recruitments/candidature/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "recruitments/jobposition",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "recruitments/jobposition",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "recruitments/jobposition/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "recruitments/jobposition/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "recruitments/jobposition/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "salaries",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "salaries",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "salaries/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "salaries/payments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "salaries/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "salaries/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "salaries/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "PUT",
+   "path": "salaries/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "setup/actiontriggers",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "elementtype",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/checkintegrity",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "target"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/company",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/conf",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/conf/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/availability",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/civilities",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "module",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/contact_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "module",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/countries",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "filter",
+    "lang",
+    "limit",
+    "loadregions",
+    "loadstates",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/countries/byCode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "lang",
+    "loadregions",
+    "loadstates"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/countries/byISO/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "lang",
+    "loadregions",
+    "loadstates"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/countries/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "lang",
+    "loadregions",
+    "loadstates"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/currencies",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "multicurrency",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/event_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "module",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/expensereport_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "module",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/holiday_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "fk_country",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/incoterms",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/legal_form",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "country",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/ordering_methods",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/ordering_origins",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/payment_terms",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/payment_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/public_holiday",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "fk_country",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/regions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "country",
+    "filter",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/regions/byCode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/regions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/shipping_methods",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "page",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/socialnetworks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/staff",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/states",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "country",
+    "filter",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/states/byCode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/states/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/thirdparty_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/ticket_categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/ticket_severities",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/ticket_types",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "lang",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/towns",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "town",
+    "zipcode"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/units",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/dictionary/vat",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "active",
+    "fk_country",
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/establishments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/establishments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/extrafields",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "elementtype",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "setup/extrafields/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/extrafields/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "setup/extrafields/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "PUT",
+   "path": "setup/extrafields/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "setup/modules",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "setup/modules/status/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "status"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "setup/modules/{}/disable",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "setup/modules/{}/enable",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "shipments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "shipments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "shipments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "shipments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "shipments/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "shipments/{}/close",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "shipments/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "shipments/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "status",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "stockmovements",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "stockmovements",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "batch",
+    "datem",
+    "eatBy",
+    "label",
+    "movementcode",
+    "origin_id",
+    "origin_type",
+    "price",
+    "product_id",
+    "qty",
+    "sellBy",
+    "type",
+    "warehouse_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "stockmovements/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "subscriptions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "subscriptions",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "subscriptions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "subscriptions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "subscriptions/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "supplierinvoices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "status",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "supplierinvoices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "supplierinvoices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "supplierinvoices/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "supplierinvoices/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "supplierinvoices/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "supplierinvoices/{}/lines/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "supplierinvoices/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices/{}/payments",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "accountid",
+    "amount",
+    "chqbank",
+    "chqemetteur",
+    "closepaidinvoices",
+    "comment",
+    "datepaye",
+    "num_payment",
+    "payment_mode_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices/{}/settodraft",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices/{}/settopaid",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "close_code",
+    "close_note"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices/{}/settounpaid",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierinvoices/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "supplierorders",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "product_ids",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilterlines",
+    "sqlfilters",
+    "status",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "supplierorders/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "supplierorders/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "supplierorders/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders/{}/approve",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse",
+    "secondlevel"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "supplierorders/{}/contact/{}/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders/{}/contact/{}/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "supplierorders/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "source",
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders/{}/lines",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders/{}/makeorder",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "comment",
+    "date",
+    "method"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders/{}/receive",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "closeopenorder",
+    "comment",
+    "lines"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierorders/{}/validate",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "idwarehouse",
+    "notrigger"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "supplierproposals",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "thirdparty_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "supplierproposals",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "supplierproposals/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "supplierproposals/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "supplierproposals/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "tasks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "tasks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "tasks/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tasks/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includetimespent"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "tasks/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "tasks/{}/addtimespent",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "date",
+    "duration",
+    "note",
+    "product_id",
+    "progress",
+    "user_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tasks/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "type"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "tasks/{}/contacts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "fk_socpeople",
+    "notrigger",
+    "source",
+    "type_contact"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "tasks/{}/contacts/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tasks/{}/getTimeSpent/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tasks/{}/roles",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "userid"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tasks/{}/timespent",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "tasks/{}/timespent/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "tasks/{}/timespent/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "date",
+    "duration",
+    "note",
+    "product_id",
+    "user_id"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "mode",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/accounts/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/barcode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/email/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/accounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/accounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "site"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/accounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/accounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/accounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/accounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/bankaccounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/bankaccounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/bankaccounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/bankaccounts/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/fixedamountdiscounts",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "filter",
+    "mode",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/fixedamountdiscounts",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/generateBankAccountDocument/{}/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/getinvoicesqualifiedforcreditnote",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/getinvoicesqualifiedforreplacement",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/merge/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/notifications",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/notifications",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/notifications/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/notifications/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/notificationsbycode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/outstandinginvoices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "mode"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/outstandingorders",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "mode"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/outstandingproposals",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "mode"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/representative/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/representative/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/representatives",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "mode"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/setpricelevel/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "thirdparties/{}/splitdiscount/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "amount_ttc_1",
+    "amount_ttc_2"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "thirdparties/{}/supplier_categories",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "thirdparties/{}/supplier_categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "thirdparties/{}/supplier_categories/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tickets",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "loadcontacts",
+    "page",
+    "pagination_data",
+    "properties",
+    "socid",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "tickets",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "tickets/newmessage",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "tickets/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tickets/track_id/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "tickets/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "tickets/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "contact_list"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "tickets/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "tickets/{}/contact/{}/{}",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "source"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "tickets/{}/contact/{}/{}",
+   "versions": [
+    "24.0.1"
+   ],
+   "params": [
+    "notrigger",
+    "source"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters",
+    "user_ids"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "users",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "users/email/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includepermissions"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/groups",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "group_ids",
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "users/groups",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "users/groups/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/groups/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includepermissions",
+    "load_members"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "users/groups/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "users/info",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includepermissions"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/login/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includepermissions"
+   ],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "users/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includepermissions"
+   ],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "users/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "users/{}/groups",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/{}/notifications",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "users/{}/notifications",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "users/{}/notifications/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "users/{}/notifications/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "users/{}/notificationsbycode/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "POST",
+   "path": "users/{}/remove-group/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/{}/setGroup/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "entity"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "users/{}/setPassword",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "send_password"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "warehouses",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "category",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "warehouses",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "warehouses/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "warehouses/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "warehouses/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "warehouses/{}/products",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "includeparentid",
+    "includestockdata",
+    "includesubproducts",
+    "includetrans",
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "webhook",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "pagination_data",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "webhook",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "webhook/triggers",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "DELETE",
+   "path": "webhook/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "webhook/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "PUT",
+   "path": "webhook/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "GET",
+   "path": "workstations",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "workstations/ref/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "workstations/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "zapier/getmoduleschoices",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "POST",
+   "path": "zapier/hook",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": true
+  },
+  {
+   "method": "DELETE",
+   "path": "zapier/hook/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "zapier/hooks",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [
+    "limit",
+    "page",
+    "properties",
+    "sortfield",
+    "sortorder",
+    "sqlfilters"
+   ],
+   "body": false
+  },
+  {
+   "method": "GET",
+   "path": "zapier/hooks/{}",
+   "versions": [
+    "23.0.3",
+    "24.0.1"
+   ],
+   "params": [],
+   "body": false
+  }
+ ]
+}

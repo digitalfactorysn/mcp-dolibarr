@@ -1,16 +1,18 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DolibarrAPI } from '../api.js';
+import { DolibarrAPI, toUnix, withAuthor } from '../api.js';
+import { andFilters, eqNum, paging } from './_util.js';
 
 export const orderTools: Tool[] = [
   {
     name: 'list_orders',
-    description: 'Lister les commandes clients. Statut: 0=Brouillon, 1=Validée, 2=En cours, 3=Livrée, 4=Annulée',
+    description: 'Lister les commandes clients. Statut : -1=Annulée, 0=Brouillon, 1=Validée, 2=Expédition en cours, 3=Livrée',
     inputSchema: {
       type: 'object',
       properties: {
         limit: { type: 'number' },
         page: { type: 'number' },
-        status: { type: 'number', description: '0=Brouillon, 1=Validée, 2=Expédiée, 3=Livrée, 4=Annulée' },
+        status: { type: 'number', description: '-1=Annulée, 0=Brouillon, 1=Validée, 2=Expédition en cours, 3=Livrée' },
+        thirdparty_ids: { type: 'string', description: 'ID(s) tiers, séparés par virgule' },
         sqlfilters: { type: 'string' },
       },
     },
@@ -65,6 +67,7 @@ export const orderTools: Tool[] = [
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID de la commande' },
+        idwarehouse: { type: 'number', description: "ID entrepôt pour le décrément de stock (0 = aucun)" },
       },
       required: ['id'],
     },
@@ -91,7 +94,8 @@ export const supplierOrderTools: Tool[] = [
       properties: {
         limit: { type: 'number' },
         page: { type: 'number' },
-        status: { type: 'number', description: '0=Brouillon, 1=Validée, 2=Approuvée, 3=En livraison, 4=Livrée, 5=Annulée, 6=Refusée' },
+        status: { type: 'string', enum: ['draft', 'validated', 'approved', 'running', 'received_start', 'received_end', 'cancelled', 'refused'], description: 'Statut de la commande fournisseur' },
+        thirdparty_ids: { type: 'string', description: 'ID(s) tiers, séparés par virgule' },
         sqlfilters: { type: 'string' },
       },
     },
@@ -146,10 +150,8 @@ export const supplierOrderTools: Tool[] = [
 export async function handleOrderTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_orders': {
-      const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/orders', params);
+      const sqlfilters = andFilters(eqNum('t.fk_statut', args.status), args.sqlfilters as string | undefined);
+      const data = await api.get('/orders', { ...paging(args), thirdparty_ids: args.thirdparty_ids, sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'get_order': {
@@ -157,8 +159,7 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'create_order': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const payload = { ...args, date, user_author_id: Number(args.user_author_id) || 1 };
+      const payload = await withAuthor(api, { ...args, date: toUnix(args.date) }, 'user_author_id');
       const id = await api.post('/orders', payload);
       return `✅ Commande client créée. ID: ${id}`;
     }
@@ -168,11 +169,11 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return `✅ Ligne ajoutée à la commande #${id}. ID ligne: ${lineId}`;
     }
     case 'validate_order': {
-      await api.post(`/orders/${args.id}/validate`, { idwarehouse: 0 });
+      await api.post(`/orders/${args.id}/validate`, { idwarehouse: args.idwarehouse ?? 0, notrigger: 0 });
       return `✅ Commande #${args.id} validée.`;
     }
     case 'convert_order_to_invoice': {
-      const invoiceId = await api.post(`/orders/${args.id}/invoice`, {});
+      const invoiceId = await api.post(`/invoices/createfromorder/${args.id}`);
       return `✅ Commande #${args.id} facturée. ID facture générée: ${invoiceId}`;
     }
     // Supplier orders
@@ -181,14 +182,12 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return JSON.stringify(data, null, 2);
     }
     case 'list_supplier_orders': {
-      const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
-      const data = await api.get('/supplierorders', params);
+      const data = await api.get('/supplierorders', { ...paging(args), status: args.status, thirdparty_ids: args.thirdparty_ids, sqlfilters: args.sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'create_supplier_order': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/supplierorders', { ...args, date, user_author_id: Number(args.user_author_id) || 1 });
+      const payload = await withAuthor(api, { ...args, date: toUnix(args.date) }, 'user_author_id');
+      const id = await api.post('/supplierorders', payload);
       return `✅ Commande fournisseur créée. ID: ${id}`;
     }
     case 'add_supplier_order_line': {
@@ -197,7 +196,7 @@ export async function handleOrderTool(name: string, args: Record<string, unknown
       return `✅ Ligne ajoutée à la commande fournisseur #${id}. ID ligne: ${lineId}`;
     }
     case 'validate_supplier_order': {
-      await api.post(`/supplierorders/${args.id}/validate`, {});
+      await api.post(`/supplierorders/${args.id}/validate`, { notrigger: 0 });
       return `✅ Commande fournisseur #${args.id} validée.`;
     }
     default:

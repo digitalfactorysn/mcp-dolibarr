@@ -1,19 +1,18 @@
 #!/usr/bin/env node
-/**
- * src/index.ts — Point d'entrée STDIO (Claude Desktop, Cursor local, Windsurf local)
- * 
- * Importe createServer() depuis server.ts et connecte en mode stdio.
- * Comportement identique à l'original — aucun changement pour les utilisateurs Claude Desktop.
- * 
- * Digital Factory Senegal — https://digitalfactory.sn
- */
+/** Point d'entrée STDIO (Claude Desktop, Cursor/Windsurf en local). */
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import dotenv from 'dotenv';
+import { loadConfig } from './config.js';
+import { createServer } from './server.js';
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer } from "./server.js";
-import dotenv from "dotenv";
+dotenv.config({ quiet: true });
 
-dotenv.config();
-
-const server = createServer();
-const transport = new StdioServerTransport();
-await server.connect(transport);
+try {
+  const cfg = loadConfig();
+  const server = createServer(cfg);
+  await server.connect(new StdioServerTransport());
+  console.error(`[MCP] mcp-dolibarr-secure prêt (mode ${cfg.mode}${cfg.mode === 'readwrite' && cfg.allowSensitive ? ' + sensibles' : ''}).`);
+} catch (e) {
+  console.error(`❌ ${e instanceof Error ? e.message : 'Démarrage impossible.'}`);
+  process.exit(1);
+}

@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DolibarrAPI } from '../api.js';
+import { DolibarrAPI, toUnix } from '../api.js';
+import { andFilters, eqNum, paging } from './_util.js';
 
 export const crmTools: Tool[] = [
   {
@@ -42,7 +43,6 @@ export const crmTools: Tool[] = [
         limit: { type: 'number' },
         thirdparty_id: { type: 'number', description: 'Filtrer les événements liés à un tiers' },
         user_id: { type: 'number', description: "Filtrer les événements d'un utilisateur" },
-        status: { type: 'number', description: '0=Non réalisé, 1=Réalisé' },
         sqlfilters: { type: 'string' },
       },
     },
@@ -77,7 +77,7 @@ export const projectTools: Tool[] = [
       type: 'object',
       properties: {
         limit: { type: 'number' },
-        status: { type: 'number', description: '0=En cours, 1=Validé, 2=Fermé. Défaut: tous' },
+        status: { type: 'number', description: '0=Brouillon, 1=Ouvert, 2=Fermé. Défaut: tous' },
         thirdparty_id: { type: 'number', description: 'Filtrer par tiers client' },
         sqlfilters: { type: 'string' },
       },
@@ -152,7 +152,7 @@ export const hrTools: Tool[] = [
       type: 'object',
       properties: {
         limit: { type: 'number' },
-        active: { type: 'number', description: '1=Actifs seulement (défaut), 0=Désactivés' },
+        active: { type: 'number', description: '1=Actifs (défaut), 0=Désactivés' },
       },
     },
   },
@@ -179,7 +179,7 @@ export const contractTools: Tool[] = [
       properties: {
         limit: { type: 'number' },
         thirdparty_id: { type: 'number', description: 'Filtrer par tiers' },
-        status: { type: 'number', description: '0=Brouillon, 1=Validé, 2=Actif, 3=Expiré' },
+        status: { type: 'number', description: '0=Brouillon, 1=Validé, 2=Clôturé' },
       },
     },
   },
@@ -203,10 +203,7 @@ export const contractTools: Tool[] = [
 export async function handleCrmTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_contacts': {
-      const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.thirdparty_id) params.thirdparty_ids = args.thirdparty_id;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/contacts', params);
+      const data = await api.get('/contacts', { ...paging(args), thirdparty_ids: args.thirdparty_id === undefined ? undefined : String(args.thirdparty_id), sqlfilters: args.sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'create_contact': {
@@ -214,30 +211,25 @@ export async function handleCrmTool(name: string, args: Record<string, unknown>,
       return `✅ Contact créé. ID: ${id}\nNom: ${args.firstname || ''} ${args.lastname}`;
     }
     case 'list_agenda_events': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.thirdparty_id) params.thirdparty_ids = args.thirdparty_id;
-      if (args.user_id) params.user_ids = args.user_id;
-      if (args.status !== undefined) params.status = args.status;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/agendaevents', params);
+      const sqlfilters = andFilters(eqNum('t.fk_soc', args.thirdparty_id), args.sqlfilters as string | undefined);
+      const data = await api.get('/agendaevents', { ...paging(args), user_ids: args.user_id === undefined ? undefined : String(args.user_id), sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'create_agenda_event': {
-      const datep = Math.floor(new Date(args.datep as string).getTime() / 1000);
-      const datep2 = args.datep2 ? Math.floor(new Date(args.datep2 as string).getTime() / 1000) : datep + 3600;
-      const meInfo = await api.get<Record<string,unknown>>('/users/info') as Record<string,unknown>;
+      const datep = toUnix(args.datep);
+      const { datep2, typecode, ...rest } = args;
+      const owner = args.userownerid ?? (await api.currentUserId());
+      const code = typecode ?? 'AC_RDV';
       const payload = {
-        ...args,
+        ...rest,
         datep,
-        datep2,
-        typecode: args.typecode || 'AC_RDV',
-        type_code: args.typecode || 'AC_RDV',
-        fulldayevent: args.fulldayevent || 0,
-        userownerid: args.userownerid || meInfo.id || 1,
-        socid: args.socid || 0,
+        datef: datep2 ? toUnix(datep2) : datep + 3600,
+        type_code: code,
+        fulldayevent: args.fulldayevent ?? 0,
+        ...(owner ? { userownerid: owner } : {}),
       };
       const id = await api.post('/agendaevents', payload);
-      return `✅ Événement CRM créé. ID: ${id}\nType: ${payload.typecode} | Label: ${args.label}`;
+      return `✅ Événement CRM créé. ID: ${id}\nType: ${code} | Label: ${args.label}`;
     }
     default:
       throw new Error(`Outil CRM inconnu: ${name}`);
@@ -247,39 +239,38 @@ export async function handleCrmTool(name: string, args: Record<string, unknown>,
 export async function handleProjectTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_projects': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.thirdparty_id) params.thirdparty_ids = args.thirdparty_id;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/projects', params);
+      const sqlfilters = andFilters(eqNum('t.fk_statut', args.status), args.sqlfilters as string | undefined);
+      const data = await api.get('/projects', { ...paging(args), thirdparty_ids: args.thirdparty_id === undefined ? undefined : String(args.thirdparty_id), sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'get_project': {
-      const [project, tasks] = await Promise.all([
-        api.get(`/projects/${args.id}`),
-        api.get('/tasks', { project_id: args.id, limit: 100 }),
-      ]);
+      const [project, tasks] = await Promise.all([api.get(`/projects/${args.id}`), api.get(`/projects/${args.id}/tasks`)]);
       return JSON.stringify({ project, tasks }, null, 2);
     }
     case 'create_project': {
-      const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
-      const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date_start, date_end, status: args.status ?? 1 };
+      const payload = {
+        ...args,
+        ...(args.date_start ? { date_start: toUnix(args.date_start) } : {}),
+        ...(args.date_end ? { date_end: toUnix(args.date_end) } : {}),
+        status: args.status ?? 1,
+      };
       const id = await api.post('/projects', payload);
       return `✅ Projet créé. ID: ${id}\nRef: ${args.ref} | Titre: ${args.title}`;
     }
     case 'list_tasks': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.project_id) params.filters = `fk_projet:${args.project_id}`;
-      const data = await api.get('/tasks', params);
-      return JSON.stringify(data, null, 2);
+      if (args.project_id !== undefined) return JSON.stringify(await api.get(`/projects/${args.project_id}/tasks`), null, 2);
+      return JSON.stringify(await api.get('/tasks', paging(args)), null, 2);
     }
     case 'create_task': {
-      const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
-      const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date_start, date_end };
-      const id = await api.post('/tasks', { ...payload, fk_project: args.project_id });
-      return `✅ Tâche créée dans le projet #${args.project_id}. ID tâche: ${id}\nLabel: ${args.label}`;
+      const { project_id, ...rest } = args;
+      const payload = {
+        ...rest,
+        fk_project: project_id,
+        ...(args.date_start ? { date_start: toUnix(args.date_start) } : {}),
+        ...(args.date_end ? { date_end: toUnix(args.date_end) } : {}),
+      };
+      const id = await api.post('/tasks', payload);
+      return `✅ Tâche créée dans le projet #${project_id}. ID tâche: ${id}\nLabel: ${args.label}`;
     }
     default:
       throw new Error(`Outil Projet inconnu: ${name}`);
@@ -289,17 +280,13 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
 export async function handleHrTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_users': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.active !== undefined) params.active = args.active;
-      else params.active = 1;
-      const data = await api.get('/users', params);
+      const active = args.active === undefined ? 1 : Number(args.active);
+      const data = await api.get('/users', { ...paging(args), sqlfilters: eqNum('t.statut', active) });
       return JSON.stringify(data, null, 2);
     }
     case 'list_expenses': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.user_id) params.user_ids = args.user_id;
-      if (args.status !== undefined) params.status = args.status;
-      const data = await api.get('/expensereports', params);
+      const sqlfilters = andFilters(eqNum('t.fk_statut', args.status), args.sqlfilters as string | undefined);
+      const data = await api.get('/expensereports', { ...paging(args), user_ids: args.user_id === undefined ? undefined : String(args.user_id), sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     default:
@@ -310,17 +297,17 @@ export async function handleHrTool(name: string, args: Record<string, unknown>, 
 export async function handleContractTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_contracts': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.thirdparty_id) params.thirdparty_ids = args.thirdparty_id;
-      if (args.status !== undefined) params.status = args.status;
-      const data = await api.get('/contracts', params);
+      const sqlfilters = andFilters(eqNum('t.statut', args.status), args.sqlfilters as string | undefined);
+      const data = await api.get('/contracts', { ...paging(args), thirdparty_ids: args.thirdparty_id === undefined ? undefined : String(args.thirdparty_id), sqlfilters, withLines: false });
       return JSON.stringify(data, null, 2);
     }
     case 'create_contract': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
-      const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date, date_start, date_end };
+      const payload = {
+        ...args,
+        date: toUnix(args.date),
+        ...(args.date_start ? { date_start: toUnix(args.date_start) } : {}),
+        ...(args.date_end ? { date_end: toUnix(args.date_end) } : {}),
+      };
       const id = await api.post('/contracts', payload);
       return `✅ Contrat créé pour le tiers #${args.socid}. ID contrat: ${id}`;
     }

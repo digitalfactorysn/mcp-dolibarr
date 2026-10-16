@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { paging } from './_util.js';
 
 export const thirdpartyTools: Tool[] = [
   {
@@ -43,9 +44,9 @@ export const thirdpartyTools: Tool[] = [
         address: { type: 'string', description: 'Adresse postale' },
         zip: { type: 'string', description: 'Code postal' },
         town: { type: 'string', description: 'Ville' },
-        country_id: { type: 'number', description: 'ID pays (ex: 221 pour Sénégal)' },
+        country_id: { type: 'number', description: 'ID pays (voir list_countries)' },
         tva_intracom: { type: 'string', description: 'Numéro TVA intracommunautaire' },
-        siret: { type: 'string', description: 'SIRET ou NINEA' },
+        siret: { type: 'string', description: 'SIRET' },
         note_public: { type: 'string', description: 'Note publique sur le tiers' },
         note_private: { type: 'string', description: 'Note privée sur le tiers' },
         codecompta: { type: 'string', description: 'Code comptable du tiers' },
@@ -123,15 +124,13 @@ export const thirdpartyTools: Tool[] = [
 export async function handleThirdpartyTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_thirdparties': {
-      const params: Record<string, unknown> = {
-        limit: args.limit || 100,
-        page: args.page || 0,
-      };
-      if (args.sortfield) params.sortfield = args.sortfield;
-      if (args.sortorder) params.sortorder = args.sortorder;
-      if (args.mode) params.mode = args.mode;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/thirdparties', params);
+      const data = await api.get('/thirdparties', {
+        ...paging(args),
+        sortfield: args.sortfield,
+        sortorder: args.sortorder,
+        mode: args.mode,
+        sqlfilters: args.sqlfilters,
+      });
       return JSON.stringify(data, null, 2);
     }
     case 'get_thirdparty': {
@@ -144,12 +143,8 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
     }
     case 'update_thirdparty': {
       const { id, ...rest } = args;
-      try {
-        await api.put(`/thirdparties/${id}`, rest);
-        return `✅ Tiers #${id} mis à jour.`;
-      } catch (_e) {
-        return `⚠️ Note: L'API Dolibarr requiert tous les champs obligatoires pour la mise à jour. Utilisez l'interface web pour les modifications complexes, ou fournissez tous les champs du tiers (name, status, client, country_id...).`;
-      }
+      await api.put(`/thirdparties/${id}`, rest);
+      return `✅ Tiers #${id} mis à jour.`;
     }
     case 'get_thirdparty_invoices': {
       const data = await api.get('/invoices', { thirdparty_ids: args.id, limit: 200 });
@@ -164,7 +159,7 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       return JSON.stringify(data, null, 2);
     }
     case 'get_thirdparty_contacts': {
-      const data = await api.get('/contacts', { socid: args.id, limit: 100 });
+      const data = await api.get('/contacts', { thirdparty_ids: String(args.id), limit: 100 });
       return JSON.stringify(data, null, 2);
     }
     default:

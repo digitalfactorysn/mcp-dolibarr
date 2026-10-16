@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DolibarrAPI } from '../api.js';
+import { DolibarrAPI, toUnix } from '../api.js';
+import { andFilters, eqNum, paging } from './_util.js';
 
 export const donationTools: Tool[] = [
   { name: 'list_donations', description: "Lister les dons/donations reçus", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, status: { type: 'number' }, sqlfilters: { type: 'string' } } } },
@@ -13,18 +14,15 @@ export const loanTools: Tool[] = [];
 export async function handleDonationTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_donations': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.status !== undefined) params.status = args.status;
-      const data = await api.get('/donations', params);
-      return JSON.stringify(data, null, 2);
+      const sqlfilters = andFilters(eqNum('t.fk_statut', args.status), args.sqlfilters as string | undefined);
+      return JSON.stringify(await api.get('/donations', { ...paging(args), sqlfilters }), null, 2);
     }
     case 'get_donation': {
       return JSON.stringify(await api.get(`/donations/${args.id}`), null, 2);
     }
     case 'create_donation': {
-      const date = Math.floor(new Date(args.date as string).getTime() / 1000);
-      const id = await api.post('/donations', { ...args, date });
-      return `✅ Don de ${args.amount} FCFA enregistré. ID: ${id}`;
+      const id = await api.post('/donations', { ...args, date: toUnix(args.date) });
+      return `✅ Don de ${args.amount} enregistré. ID: ${id}`;
     }
     default: throw new Error(`Outil don inconnu: ${name}`);
   }

@@ -1,29 +1,16 @@
-version: '3.8'
-
+# Le port n'est publié que sur la boucle locale : placez un reverse proxy HTTPS (Caddy, nginx…)
+# devant pour tout accès distant. Ne publiez JAMAIS ce port en 0.0.0.0 sans TLS.
 services:
   mcp-dolibarr:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mcp-dolibarr
+    build: .
+    image: mcp-dolibarr-secure:3.0.0
     restart: unless-stopped
+    env_file: .env
     ports:
-      - "3100:3100"
-    environment:
-      - DOLIBARR_URL=${DOLIBARR_URL}
-      - DOLIBARR_API_KEY=${DOLIBARR_API_KEY}
-      - PORT=3100
-      - MCP_API_TOKEN=${MCP_API_TOKEN:-}
-    networks:
-      - 1panel-network
-    mem_limit: 256m
-    memswap_limit: 256m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-networks:
-  1panel-network:
-    external: true
+      - "127.0.0.1:3100:3100"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp

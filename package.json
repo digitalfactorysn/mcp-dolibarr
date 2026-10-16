@@ -1,51 +1,44 @@
 {
-  "name": "mcp-dolibarr",
-  "version": "2.1.0",
-  "description": "A comprehensive Model Context Protocol (MCP) server for Dolibarr ERP/CRM. Enables AI assistants (Claude, Cursor, Windsurf, etc.) to act as full Dolibarr experts: invoicing, accounting, CRM, HR, projects, configuration and much more.",
-  "main": "build/index.js",
+  "name": "mcp-dolibarr-secure",
+  "version": "3.0.0",
+  "description": "Hardened fork of mcp-dolibarr: MCP server for Dolibarr ERP/CRM 23+/24 with read-only default, mandatory HTTP authentication, strict input validation and a route allowlist generated from the Dolibarr sources.",
+  "private": true,
   "type": "module",
+  "main": "build/index.js",
   "bin": {
     "mcp-dolibarr": "build/index.js",
     "mcp-dolibarr-http": "build/http.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "start": "node build/index.js",
     "start:http": "node build/http.js",
-    "dev": "node --loader ts-node/esm src/index.ts",
-    "dev:http": "node --loader ts-node/esm src/http.ts",
-    "prepublishOnly": "npm run build"
+    "test": "npm run build && node --test test/*.test.mjs",
+    "audit:prod": "npm audit --omit=dev --audit-level=low"
   },
   "keywords": [
     "mcp",
     "dolibarr",
     "erp",
     "crm",
-    "claude",
-    "ai",
-    "model-context-protocol",
-    "accounting",
-    "invoicing"
+    "model-context-protocol"
   ],
-  "author": "Digital Factory Senegal",
+  "author": "Digital Factory Senegal (upstream), hardened fork",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/digitalfactorysn/mcp-dolibarr.git"
-  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "axios": "^1.15.0",
-    "dotenv": "^17.4.1",
-    "express": "^4.21.0"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "axios": "^1.20.0",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.4.0"
+    "typescript": "^5.9.3"
   }
 }
