@@ -1,20 +1,22 @@
-# ── Build stage ──────────────────────────────
-FROM node:20-alpine AS builder
+# syntax=docker/dockerfile:1
+FROM node:22-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY tsconfig.json ./
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci
 COPY src ./src
-RUN npm run build
+COPY scripts/copy-assets.mjs ./scripts/copy-assets.mjs
+RUN npm run build && npm prune --omit=dev
 
-# ── Runtime stage ────────────────────────────
-FROM node:20-alpine
+FROM node:22-alpine
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=3100
 WORKDIR /app
-ENV NODE_ENV=production
-COPY package*.json ./
-RUN npm install --omit=dev && npm cache clean --force
-COPY --from=builder /app/build ./build
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/build ./build
+COPY --chown=node:node package.json ./
+USER node
 EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
-  CMD wget -qO- http://localhost:3100/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3100)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "build/http.js"]

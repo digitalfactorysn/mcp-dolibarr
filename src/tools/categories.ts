@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { paging } from './_util.js';
 
 export const categoryTools: Tool[] = [
   { name: 'list_categories', description: "Lister les catégories Dolibarr. Type: 0=Produit, 1=Fournisseur, 2=Client, 3=Membre, 4=Contact, 5=Compte", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, type: { type: 'number', description: '0=Produit, 1=Fournisseur, 2=Client, 3=Membre, 4=Contact, 5=Compte' }, sqlfilters: { type: 'string' } } } },
@@ -11,10 +12,8 @@ export const categoryTools: Tool[] = [
 export async function handleCategoryTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_categories': {
-      const params: Record<string, unknown> = { limit: args.limit || 100 };
-      if (args.type !== undefined) params.type = args.type;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/categories', params);
+      const { limit, page } = paging(args);
+      const data = await api.get('/categories', { limit, page, type: args.type, sqlfilters: args.sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'create_category': {
@@ -26,7 +25,7 @@ export async function handleCategoryTool(name: string, args: Record<string, unkn
       return JSON.stringify(data, null, 2);
     }
     case 'add_object_to_category': {
-      await api.post(`/categories/${args.id}/objects/${args.object_type}`, { id: args.object_id });
+      await api.post(`/categories/${args.id}/objects/${args.object_type}/${args.object_id}`);
       return `✅ Objet #${args.object_id} (${args.object_type}) ajouté à la catégorie #${args.id}.`;
     }
     default: throw new Error(`Outil inconnu: ${name}`);

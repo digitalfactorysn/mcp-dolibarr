@@ -1,16 +1,18 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DolibarrAPI } from '../api.js';
+import { DolibarrAPI, toUnix, withAuthor } from '../api.js';
+import { andFilters, eqNum, paging } from './_util.js';
 
 export const proposalTools: Tool[] = [
   {
     name: 'list_proposals',
-    description: 'Lister les devis/propositions commerciales. Statut: 0=Brouillon, 1=Validé, 2=Signé, 3=Refusé, 4=Expiré',
+    description: 'Lister les devis/propositions commerciales. Statut : 0=Brouillon, 1=Validé (ouvert), 2=Signé, 3=Non signé (refusé), 4=Facturé',
     inputSchema: {
       type: 'object',
       properties: {
         limit: { type: 'number', description: 'Nombre max de résultats' },
         page: { type: 'number', description: 'Page de pagination' },
-        status: { type: 'number', description: '0=Brouillon, 1=Validé, 2=Signé, 3=Refusé, 4=Expiré' },
+        status: { type: 'number', description: '0=Brouillon, 1=Validé, 2=Signé, 3=Non signé, 4=Facturé' },
+        thirdparty_ids: { type: 'string', description: 'ID(s) tiers, séparés par virgule' },
         sqlfilters: { type: 'string', description: 'Filtre SQL avancé' },
       },
     },
@@ -67,22 +69,21 @@ export const proposalTools: Tool[] = [
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du devis' },
-        status: { type: 'number', description: '1=Validé/Envoyé, 2=Signé. Défaut: 1' },
       },
       required: ['id'],
     },
   },
   {
     name: 'close_proposal',
-    description: "Clôturer un devis (marquer comme refusé ou expiré sans conversion)",
+    description: "Clôturer un devis validé : signé/accepté (2) ou refusé (3)",
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du devis' },
-        status: { type: 'number', description: '3=Refusé, 4=Expiré. Défaut: 3' },
-        note: { type: 'string', description: 'Raison de la clôture' },
+        status: { type: 'number', enum: [2, 3], description: '2=Signé/accepté, 3=Refusé' },
+        note: { type: 'string', description: 'Raison de la clôture (note privée)' },
       },
-      required: ['id'],
+      required: ['id', 'status'],
     },
   },
   {
@@ -91,7 +92,7 @@ export const proposalTools: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        id: { type: 'number', description: 'ID du devis (doit être signé - statut 2)' },
+        id: { type: 'number', description: 'ID du devis (validé ou signé)' },
       },
       required: ['id'],
     },
@@ -101,10 +102,9 @@ export const proposalTools: Tool[] = [
 export async function handleProposalTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_proposals': {
-      const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/proposals', params);
+      // Dolibarr n'a pas de paramètre « status » sur /proposals : on filtre via USF (fk_statut).
+      const sqlfilters = andFilters(eqNum('t.fk_statut', args.status), args.sqlfilters as string | undefined);
+      const data = await api.get('/proposals', { ...paging(args), thirdparty_ids: args.thirdparty_ids, sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'get_proposal': {
@@ -112,10 +112,12 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       return JSON.stringify(data, null, 2);
     }
     case 'create_proposal': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const fin_validite = args.fin_validite ? Math.floor(new Date(args.fin_validite as string).getTime() / 1000) : null;
-      const payload = { ...args, date, fin_validite, user_author_id: Number(args.user_author_id) || 1 };
-      delete (payload as Record<string, unknown>).fin_validite;
+      const { fin_validite, ...rest } = args;
+      const payload = await withAuthor(
+        api,
+        { ...rest, date: toUnix(args.date), ...(fin_validite ? { fin_validite: toUnix(fin_validite) } : {}) },
+        'user_author_id',
+      );
       const id = await api.post('/proposals', payload);
       return `✅ Devis créé avec succès. ID: ${id}\nProchaine étape: Ajoutez des lignes avec 'add_proposal_line', puis validez avec 'validate_proposal'.`;
     }
@@ -125,20 +127,22 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       return `✅ Ligne ajoutée au devis #${id}. ID ligne: ${lineId}`;
     }
     case 'validate_proposal': {
-      const status = args.status || 1;
-      await api.post(`/proposals/${args.id}/validate`, { status });
-      return `✅ Devis #${args.id} validé (statut: ${status === 2 ? 'Signé' : 'Envoyé'}).`;
+      await api.post(`/proposals/${args.id}/validate`, { notrigger: 0 });
+      return `✅ Devis #${args.id} validé (statut : ouvert / à envoyer).`;
     }
     case 'close_proposal': {
-      const status = args.status || 3;
-      await api.post(`/proposals/${args.id}/close`, { status, note: args.note || '' });
-      return `✅ Devis #${args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`;
+      const status = Number(args.status);
+      await api.post(`/proposals/${args.id}/close`, {
+        status,
+        note_private: args.note ?? '',
+        notrigger: 0,
+      });
+      return `✅ Devis #${args.id} clôturé (statut : ${status === 2 ? 'signé / accepté' : 'refusé'}).`;
     }
     case 'convert_proposal_to_order': {
-      const data = await api.post(`/proposals/${args.id}/close`, { status: 2 });
-      // Then create order from proposal
-      const orderId = await api.post('/orders', { origin: 'propal', origin_id: args.id });
-      return `✅ Devis #${args.id} converti en commande client. ID commande: ${orderId}`;
+      // Dolibarr crée la commande à partir d'un devis validé ou signé.
+      const orderId = await api.post(`/orders/createfromproposal/${args.id}`);
+      return `✅ Commande client créée à partir du devis #${args.id}. ID commande: ${orderId}`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

@@ -1,16 +1,16 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DolibarrAPI } from '../api.js';
+import { ApiError, DolibarrAPI, toUnix, withAuthor } from '../api.js';
 
 export const invoiceTools: Tool[] = [
   {
     name: 'list_invoices',
-    description: 'Lister les factures avec filtres avancés (statut, tiers, date). Statut: 0=Brouillon, 1=Ouverte/Impayée, 2=Payée, 3=Abandonnée',
+    description: 'Lister les factures avec filtres avancés (statut, tiers, date). Statut : draft, unpaid, paid, cancelled. Pour une période, utilisez sqlfilters, ex. ((t.datef:>=:\'2025-01-01\') and (t.datef:<=:\'2025-12-31\'))',
     inputSchema: {
       type: 'object',
       properties: {
         limit: { type: 'number', description: 'Nombre max (défaut: 100)' },
         page: { type: 'number', description: 'Page de pagination' },
-        status: { type: 'number', description: '0=Brouillon, 1=Impayée, 2=Payée, 3=Abandonnée' },
+        status: { type: 'string', enum: ['draft', 'unpaid', 'paid', 'cancelled'], description: 'Statut de la facture' },
         thirdparty_ids: { type: 'string', description: 'ID(s) tiers, séparés par virgule' },
         sqlfilters: { type: 'string', description: "Filtre SQL: ex: (t.date_lim_reglement:lt:'2024-12-31')" },
       },
@@ -105,20 +105,6 @@ export const invoiceTools: Tool[] = [
     },
   },
   {
-    name: 'send_invoice_email',
-    description: "Envoyer une facture par email au client. Génère le PDF Dolibarr et l'attache.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'number', description: 'ID de la facture' },
-        sendto: { type: 'string', description: 'Email destinataire' },
-        subject: { type: 'string', description: "Sujet de l'email" },
-        message: { type: 'string', description: "Corps de l'email" },
-      },
-      required: ['id', 'sendto'],
-    },
-  },
-  {
     name: 'add_payment_to_invoice',
     description: "Enregistrer un paiement (règlement) sur une facture validée",
     inputSchema: {
@@ -129,7 +115,7 @@ export const invoiceTools: Tool[] = [
         payment_mode_id: { type: 'number', description: 'ID du mode de paiement (utiliser list_payment_methods)' },
         closepaidinvoices: { type: 'string', description: '"yes" pour fermer la facture si totalement payée (défaut: yes)' },
         accountid: { type: 'number', description: 'ID compte bancaire pour enregistrement (utiliser list_bank_accounts)' },
-        amount: { type: 'number', description: 'Montant payé (si partiel, sinon total TTC)' },
+        amount: { type: 'number', description: 'Montant payé TTC (paiement partiel). Si absent : solde restant dû de la facture' },
         comment: { type: 'string', description: 'Commentaire/référence du paiement (ex: N° virement)' },
       },
       required: ['id', 'datepaye', 'payment_mode_id'],
@@ -164,9 +150,7 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       return JSON.stringify(data, null, 2);
     }
     case 'create_invoice': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const payload = { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 };
-      delete (payload as Record<string, unknown>).date;
+      const payload = await withAuthor(api, { ...args, date: toUnix(args.date) }, 'fk_user_author');
       const id = await api.post('/invoices', payload);
       return `✅ Facture brouillon créée avec succès.\nID facture: ${id}\nTiers ID: ${args.socid}\nProchaine étape: Ajoutez des lignes avec 'add_invoice_line', puis validez avec 'validate_invoice'.`;
     }
@@ -186,47 +170,54 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       return `✅ Ligne #${args.line_id} supprimée de la facture #${args.invoice_id}.`;
     }
     case 'validate_invoice': {
-      await api.post(`/invoices/${args.id}/validate`, {
-        idwarehouse: args.idwarehouse || 0,
-        notrigger: 0,
-      });
+      await api.post(`/invoices/${args.id}/validate`, { idwarehouse: args.idwarehouse ?? 0, notrigger: 0 });
       return `✅ Facture #${args.id} validée avec succès. Elle est maintenant officielle et envoyable au client.`;
     }
-    case 'send_invoice_email': {
-      const payload = {
-        sendto: args.sendto,
-        subject: args.subject || `Facture N°`,
-        message: args.message || 'Veuillez trouver ci-joint votre facture.',
-        attach_pdf: 1,
-      };
-      await api.post(`/invoices/${args.id}/sendbyemail`, payload);
-      return `✅ Facture #${args.id} envoyée par email à ${args.sendto}.`;
-    }
     case 'add_payment_to_invoice': {
-      const payDate = args.datepaye ? Math.floor(new Date(args.datepaye as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const invoice = await api.get<Record<string, unknown>>(`/invoices/${args.id}`);
-      const amount = args.amount || (invoice.total_ttc as number);
-      const payload = {
-        datepaye: payDate,
-        paiementid: args.payment_mode_id,
-        closepaidinvoices: args.closepaidinvoices || 'yes',
+      const paid = Number((await api.get<Array<{ amount?: string | number }>>(`/invoices/${args.id}/payments`).catch(() => []) as Array<{ amount?: string | number }>)
+        .reduce((sum, p) => sum + Number(p.amount ?? 0), 0));
+      const remain = Math.round((Number(invoice.total_ttc) - paid) * 100) / 100;
+      const amount = args.amount !== undefined ? Number(args.amount) : remain;
+      if (!(amount > 0)) throw new ApiError('Aucun montant à régler sur cette facture (solde nul).');
+      const paymentId = await api.post('/invoices/paymentsdistributed', {
+        arrayofamounts: { [String(args.id)]: { amount: String(amount), multicurrency_amount: '' } },
+        datepaye: toUnix(args.datepaye),
+        paymentid: args.payment_mode_id,
+        closepaidinvoices: args.closepaidinvoices ?? 'yes',
         accountid: args.accountid,
-        comment: args.comment || '',
-        amounts: { [args.id as string]: amount },
-      };
-      const paymentId = await api.post('/invoices/paymentsdistributed', payload);
+        comment: args.comment ?? '',
+      });
       return `✅ Paiement de ${amount} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
     }
     case 'create_credit_note': {
-      const sourceInvoice = await api.get<Record<string, unknown>>(`/invoices/${args.source_invoice_id}`);
-      const payload = {
-        socid: sourceInvoice.socid,
-        type: 2, // Avoir
-        fac_rec: args.source_invoice_id,
-        note_public: args.description || `Avoir sur facture #${args.source_invoice_id}`,
-      };
+      const src = await api.get<Record<string, unknown> & { lines?: Array<Record<string, unknown>> }>(
+        `/invoices/${args.source_invoice_id}`,
+        { withLines: true },
+      );
+      const lines = (src.lines ?? []).map((l) => ({
+        desc: l.desc ?? l.description ?? l.label ?? '',
+        subprice: l.subprice,
+        qty: -Math.abs(Number(l.qty)),
+        tva_tx: l.tva_tx,
+        fk_product: l.fk_product || undefined,
+        product_type: l.product_type,
+        remise_percent: l.remise_percent,
+      }));
+      const payload = await withAuthor(
+        api,
+        {
+          socid: src.socid,
+          type: 2,
+          fk_facture_source: Number(args.source_invoice_id),
+          date: toUnix(undefined),
+          note_public: args.description ?? `Avoir sur facture ${String(src.ref ?? args.source_invoice_id)}`,
+          lines,
+        },
+        'fk_user_author',
+      );
       const id = await api.post('/invoices', payload);
-      return `✅ Avoir (facture de crédit) créé. ID: ${id}. Associé à la facture source #${args.source_invoice_id}.`;
+      return `✅ Avoir brouillon créé (ID ${id}) à partir de la facture #${args.source_invoice_id} (lignes reprises en quantités négatives). Vérifiez-le puis validez-le avec validate_invoice.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

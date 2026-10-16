@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DolibarrAPI } from '../api.js';
+import { DolibarrAPI, toUnix, withAuthor } from '../api.js';
+import { andFilters, eqNum, paging } from './_util.js';
 
 export const interventionTools: Tool[] = [
   { name: 'list_interventions', description: "Lister les fiches d'intervention. Statut: 0=Brouillon, 1=Validée, 2=Facturée, 3=Abandonnée", inputSchema: { type: 'object', properties: { limit: { type: 'number' }, page: { type: 'number' }, status: { type: 'number' }, thirdparty_id: { type: 'number' }, sqlfilters: { type: 'string' } } } },
@@ -13,11 +14,8 @@ export const interventionTools: Tool[] = [
 export async function handleInterventionTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_interventions': {
-      const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.status !== undefined) params.status = args.status;
-      if (args.thirdparty_id) params.thirdparty_ids = args.thirdparty_id;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/interventions', params);
+      const sqlfilters = andFilters(eqNum('t.fk_statut', args.status), args.sqlfilters as string | undefined);
+      const data = await api.get('/interventions', { ...paging(args), thirdparty_ids: args.thirdparty_id === undefined ? undefined : String(args.thirdparty_id), sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'get_intervention': {
@@ -25,22 +23,21 @@ export async function handleInterventionTool(name: string, args: Record<string, 
       return JSON.stringify(data, null, 2);
     }
     case 'create_intervention': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const id = await api.post('/interventions', { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 });
+      const payload = await withAuthor(api, { ...args, date: toUnix(args.date) }, 'fk_user_author');
+      const id = await api.post('/interventions', payload);
       return `✅ Fiche d'intervention créée. ID: ${id}`;
     }
     case 'add_intervention_line': {
       const { id, ...line } = args;
-      if (line.date) line.date = Math.floor(new Date(line.date as string).getTime() / 1000);
-      const lineId = await api.post(`/interventions/${id}/lines`, line);
+      const lineId = await api.post(`/interventions/${id}/lines`, { ...line, ...(line.date ? { date: toUnix(line.date) } : {}) });
       return `✅ Ligne ajoutée à l'intervention #${id}. ID ligne: ${lineId}`;
     }
     case 'validate_intervention': {
-      await api.post(`/interventions/${args.id}/validate`, {});
+      await api.post(`/interventions/${args.id}/validate`, { notrigger: 0 });
       return `✅ Fiche d'intervention #${args.id} validée.`;
     }
     case 'close_intervention': {
-      await api.post(`/interventions/${args.id}/close`, {});
+      await api.post(`/interventions/${args.id}/close`, { notrigger: 0 });
       return `✅ Fiche d'intervention #${args.id} clôturée.`;
     }
     default: throw new Error(`Outil inconnu: ${name}`);

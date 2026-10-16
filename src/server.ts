@@ -1,11 +1,21 @@
 /**
- * src/server.ts — MCP Dolibarr v5.0 — COMPLET 100%
- * Digital Factory Senegal — https://digitalfactory.sn
+ * Serveur MCP Dolibarr (fork durci).
+ *
+ * Chaque appel d'outil traverse, dans l'ordre :
+ *   1. politique (mode lecture seule / outils sensibles / listes d'activation) ;
+ *   2. validation stricte des arguments (schémas durcis, additionalProperties:false) ;
+ *   3. exécution du handler via un client API en liste blanche de routes ;
+ *   4. troncature de la sortie (MCP_MAX_RESPONSE_CHARS).
+ * Les erreurs internes ne sont jamais renvoyées telles quelles au client.
  */
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import dotenv from "dotenv";
-import { DolibarrAPI } from "./api.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from '@modelcontextprotocol/sdk/types.js';
+import { DolibarrAPI, ApiError } from './api.js';
+import { loadConfig, type Config } from './config.js';
+import { annotate, dedupe, denialReason, isAllowed } from './security/policy.js';
+import { ToolValidator, ValidationError } from './security/validation.js';
+import { UsfError } from './security/usf.js';
+import { manifestInfo } from './security/routes.js';
 
 import { thirdpartyTools, handleThirdpartyTool } from "./tools/thirdparties.js";
 import { invoiceTools, handleInvoiceTool } from "./tools/invoices.js";
@@ -30,88 +40,92 @@ import { mailingTools, resourceTools, handleMailingTool, handleResourceTool } fr
 import { donationTools, loanTools, handleDonationTool, handleLoanTool } from "./tools/donations_loans.js";
 import { expenseReportTools, handleExpenseReportTool } from "./tools/expense_reports.js";
 import { accountingAdvancedTools, handleAccountingAdvancedTool } from "./tools/accounting_advanced.js";
-import { accountingConfigTools, handleAccountingConfigTool } from "./tools/accounting_config.js";
 import { pricingTools, handlePricingTool } from "./tools/pricing.js";
 import { notificationTools, handleNotificationTool } from "./tools/notifications.js";
 
-dotenv.config();
+type Handler = (name: string, args: Record<string, unknown>, api: DolibarrAPI, cfg: Config) => Promise<string>;
 
-const ALL_TOOLS = [
-  ...thirdpartyTools, ...invoiceTools, ...proposalTools,
-  ...orderTools, ...supplierOrderTools, ...productTools,
-  ...accountingTools, ...crmTools, ...projectTools,
-  ...hrTools, ...contractTools, ...setupTools,
-  ...supplierInvoiceTools, ...interventionTools, ...ticketTools,
-  ...shipmentTools, ...receptionTools, ...categoryTools,
-  ...memberTools, ...bomTools, ...manufacturingTools,
-  ...leaveTools, ...salaryTools,
-  ...documentTools, ...warehouseTools, ...batchTools,
-  ...paymentTools, ...mailingTools, ...resourceTools,
-  ...donationTools, ...loanTools,
-  ...expenseReportTools,
-  ...accountingAdvancedTools,
-    ...accountingConfigTools,
-  ...pricingTools,
-  ...notificationTools,
+export const TOOL_SETS: { tools: Tool[]; h: Handler }[] = [
+  { tools: thirdpartyTools, h: handleThirdpartyTool },
+  { tools: invoiceTools, h: handleInvoiceTool },
+  { tools: proposalTools, h: handleProposalTool },
+  { tools: [...orderTools, ...supplierOrderTools], h: handleOrderTool },
+  { tools: productTools, h: handleProductTool },
+  { tools: accountingTools, h: handleAccountingTool },
+  { tools: crmTools, h: handleCrmTool },
+  { tools: projectTools, h: handleProjectTool },
+  { tools: hrTools, h: handleHrTool },
+  { tools: contractTools, h: handleContractTool },
+  { tools: setupTools, h: handleSetupTool },
+  { tools: supplierInvoiceTools, h: handleSupplierInvoiceTool },
+  { tools: interventionTools, h: handleInterventionTool },
+  { tools: ticketTools, h: handleTicketTool },
+  { tools: [...shipmentTools, ...receptionTools], h: handleShipmentTool },
+  { tools: categoryTools, h: handleCategoryTool },
+  { tools: memberTools, h: handleMemberTool },
+  { tools: bomTools, h: handleBomTool },
+  { tools: manufacturingTools, h: handleManufacturingTool },
+  { tools: leaveTools, h: handleLeaveTool },
+  { tools: salaryTools, h: handleSalaryTool },
+  { tools: documentTools, h: handleDocumentTool },
+  { tools: [...warehouseTools, ...batchTools], h: handleWarehouseTool },
+  { tools: paymentTools, h: handlePaymentTool },
+  { tools: mailingTools, h: handleMailingTool },
+  { tools: resourceTools, h: handleResourceTool },
+  { tools: donationTools, h: handleDonationTool },
+  { tools: loanTools, h: handleLoanTool },
+  { tools: expenseReportTools, h: handleExpenseReportTool },
+  { tools: accountingAdvancedTools, h: handleAccountingAdvancedTool },
+    { tools: pricingTools, h: handlePricingTool },
+  { tools: notificationTools, h: handleNotificationTool },
 ];
 
-async function routeTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
-  const sets = [
-    { tools: thirdpartyTools, h: handleThirdpartyTool },
-    { tools: invoiceTools, h: handleInvoiceTool },
-    { tools: proposalTools, h: handleProposalTool },
-    { tools: [...orderTools, ...supplierOrderTools], h: handleOrderTool },
-    { tools: productTools, h: handleProductTool },
-    { tools: accountingTools, h: handleAccountingTool },
-    { tools: crmTools, h: handleCrmTool },
-    { tools: projectTools, h: handleProjectTool },
-    { tools: hrTools, h: handleHrTool },
-    { tools: contractTools, h: handleContractTool },
-    { tools: setupTools, h: handleSetupTool },
-    { tools: supplierInvoiceTools, h: handleSupplierInvoiceTool },
-    { tools: interventionTools, h: handleInterventionTool },
-    { tools: ticketTools, h: handleTicketTool },
-    { tools: [...shipmentTools, ...receptionTools], h: handleShipmentTool },
-    { tools: categoryTools, h: handleCategoryTool },
-    { tools: memberTools, h: handleMemberTool },
-    { tools: bomTools, h: handleBomTool },
-    { tools: manufacturingTools, h: handleManufacturingTool },
-    { tools: leaveTools, h: handleLeaveTool },
-    { tools: salaryTools, h: handleSalaryTool },
-    { tools: documentTools, h: handleDocumentTool },
-    { tools: [...warehouseTools, ...batchTools], h: handleWarehouseTool },
-    { tools: paymentTools, h: handlePaymentTool },
-    { tools: mailingTools, h: handleMailingTool },
-    { tools: resourceTools, h: handleResourceTool },
-    { tools: donationTools, h: handleDonationTool },
-    { tools: loanTools, h: handleLoanTool },
-    { tools: expenseReportTools, h: handleExpenseReportTool },
-    { tools: accountingAdvancedTools, h: handleAccountingAdvancedTool },
-    { tools: accountingConfigTools, h: handleAccountingConfigTool },
-    { tools: pricingTools, h: handlePricingTool },
-    { tools: notificationTools, h: handleNotificationTool },
-  ];
-  for (const { tools, h } of sets) {
-    if (tools.map(t => t.name).includes(name)) return h(name, args, api);
-  }
-  throw new Error(`Outil inconnu : ${name}`);
+export const ALL_TOOLS: Tool[] = dedupe(TOOL_SETS.flatMap((s) => s.tools));
+const HANDLERS = new Map<string, Handler>();
+for (const s of TOOL_SETS) for (const t of s.tools) if (!HANDLERS.has(t.name)) HANDLERS.set(t.name, s.h);
+
+export const VERSION = '3.0.0';
+
+export function createApi(cfg: Config): DolibarrAPI {
+  return new DolibarrAPI(cfg.dolibarrUrl, cfg.apiKey, {
+    readOnly: cfg.mode !== 'readwrite',
+    dolibarrVersion: cfg.dolibarrVersion,
+  });
 }
 
-export function createServer(): Server {
-  const DOLIBARR_URL = process.env.DOLIBARR_URL;
-  const DOLIBARR_API_KEY = process.env.DOLIBARR_API_KEY;
-  if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
-  const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
-  const server = new Server({ name: "mcp-dolibarr", version: "5.0.0" }, { capabilities: { tools: {} } });
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}\n… [sortie tronquée à ${max} caractères — affinez avec limit/page/sqlfilters]`;
+}
+
+export function createServer(cfg: Config = loadConfig(), api: DolibarrAPI = createApi(cfg)): Server {
+  const validator = new ToolValidator(ALL_TOOLS);
+  const visible = ALL_TOOLS.filter((t) => isAllowed(t.name, cfg)).map((t) =>
+    annotate({ ...t, inputSchema: validator.schemas.get(t.name) as Tool['inputSchema'] }),
+  );
+  const server = new Server({ name: 'mcp-dolibarr-secure', version: VERSION }, { capabilities: { tools: {} } });
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: visible }));
+
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const { name, arguments: args } = req.params;
+    const { name, arguments: rawArgs } = req.params;
+    const fail = (text: string) => ({ content: [{ type: 'text' as const, text: `❌ ${text}` }], isError: true });
+    const handler = HANDLERS.get(name);
+    if (!handler) return fail('Outil inconnu.');
+    if (!isAllowed(name, cfg)) return fail(denialReason(name, cfg));
     try {
-      const result = await routeTool(name, (args as Record<string, unknown>) || {}, api);
-      return { content: [{ type: "text" as const, text: result }] };
+      const args = validator.validate(name, rawArgs);
+      const out = await handler(name, args, api, cfg);
+      return { content: [{ type: 'text' as const, text: truncate(out, cfg.maxResponseChars) }] };
     } catch (error) {
-      return { content: [{ type: "text" as const, text: `❌ ${error instanceof Error ? error.message : 'Erreur inconnue'}` }], isError: true };
+      if (error instanceof ValidationError || error instanceof ApiError || error instanceof UsfError) {
+        return fail(error.message);
+      }
+      console.error(`[MCP] Erreur interne dans ${name}:`, error instanceof Error ? error.message : 'inconnue');
+      return fail('Erreur interne du serveur MCP.');
     }
   });
   return server;
 }
+
+export { manifestInfo };

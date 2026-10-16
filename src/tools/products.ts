@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { paging } from './_util.js';
 
 export const productTools: Tool[] = [
   {
@@ -39,7 +40,7 @@ export const productTools: Tool[] = [
         type: { type: 'number', description: '0=Produit physique, 1=Service. Défaut: 1' },
         price: { type: 'number', description: 'Prix HT de vente' },
         price_ttc: { type: 'number', description: 'Prix TTC (calculé si price fourni)' },
-        tva_tx: { type: 'number', description: 'Taux TVA % (ex: 18)' },
+        tva_tx: { type: 'number', description: 'Taux de TVA % (obligatoire, aucun défaut)' },
         price_base_type: { type: 'string', description: '"HT" ou "TTC". Défaut: HT' },
         stock: { type: 'number', description: 'Stock initial (pour produits physiques)' },
         weight: { type: 'number', description: 'Poids en kg (pour produits physiques)' },
@@ -49,7 +50,7 @@ export const productTools: Tool[] = [
         accountancy_code_sell: { type: 'string', description: 'Code comptable de vente' },
         accountancy_code_buy: { type: 'string', description: "Code comptable d'achat" },
       },
-      required: ['ref', 'label'],
+      required: ['ref', 'label', 'tva_tx'],
     },
   },
   {
@@ -100,10 +101,7 @@ export const productTools: Tool[] = [
 export async function handleProductTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'list_products': {
-      const params: Record<string, unknown> = { limit: args.limit || 100, page: args.page || 0 };
-      if (args.mode !== undefined) params.mode = args.mode;
-      if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
-      const data = await api.get('/products', params);
+      const data = await api.get('/products', { ...paging(args), mode: args.mode, sqlfilters: args.sqlfilters });
       return JSON.stringify(data, null, 2);
     }
     case 'get_product': {
@@ -111,19 +109,10 @@ export async function handleProductTool(name: string, args: Record<string, unkno
       return JSON.stringify(data, null, 2);
     }
     case 'create_product': {
-      const payload = {
-        type: 1,
-        price_base_type: 'HT',
-        status: 1,
-        status_buy: 1,
-        tva_tx: 18,
-        ...args,
-      };
+      // Aucun taux de TVA codé en dur : tva_tx est obligatoire (schéma) et transmis tel quel.
+      const payload = { type: 1, price_base_type: 'HT', status: 1, status_buy: 1, ...args };
       const id = await api.post('/products', payload);
-      return `✅ Produit/Service créé avec succès.
-ID: ${id}
-Ref: ${args.ref}
-Label: ${args.label}`;
+      return `✅ Produit/Service créé avec succès.\nID: ${id}\nRef: ${args.ref}\nLabel: ${args.label}`;
     }
     case 'update_product': {
       const { id, ...rest } = args;
@@ -135,19 +124,16 @@ Label: ${args.label}`;
       return JSON.stringify(data, null, 2);
     }
     case 'update_product_stock': {
-      const payload = {
+      const qty = Number(args.qty);
+      await api.post('/stockmovements', {
         product_id: args.product_id,
         warehouse_id: args.warehouse_id,
-        qty: args.qty,
-        price: args.price || 0,
-        label: args.label || 'Mouvement de stock via MCP',
-        codeinventory: args.codeinventory || '',
-        type_mouvement: (args.qty as number) > 0 ? 0 : 1, // 0=Entrée, 1=Sortie
-      };
-      await api.post('/stockmovements', payload);
-      const direction = (args.qty as number) > 0 ? 'Entrée' : 'Sortie';
-      return `✅ Mouvement de stock enregistré.
-${direction} de ${Math.abs(args.qty as number)} unité(s) du produit #${args.product_id} dans l'entrepôt #${args.warehouse_id}.`;
+        qty,
+        price: args.price,
+        label: args.label ?? 'Mouvement de stock via MCP',
+        movementcode: args.codeinventory,
+      });
+      return `✅ Mouvement de stock enregistré.\n${qty > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(qty)} unité(s) du produit #${args.product_id} dans l'entrepôt #${args.warehouse_id}.`;
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);
