@@ -121,7 +121,7 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
     }
     case 'add_proposal_line': {
       const { id, ...line } = args;
-      const lineId = await api.post(`/proposals/${id}/lines`, line);
+      const lineId = await api.post(`/proposals/${id}/lines`, [line]);
       return `✅ Ligne ajoutée au devis #${id}. ID ligne: ${lineId}`;
     }
     case 'validate_proposal': {
