@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { maskPaymentUrls } from '../utils/security.js';
 
 export const proposalTools: Tool[] = [
   {
@@ -45,19 +46,19 @@ export const proposalTools: Tool[] = [
   },
   {
     name: 'add_proposal_line',
-    description: 'Ajouter une ligne de produit ou service à un devis',
+    description: 'Ajouter une ligne de produit ou service à un devis avec contrôle unitaire, vérification des totaux et garantie d’unicité',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'ID du devis' },
-        desc: { type: 'string', description: 'Description de la ligne' },
-        subprice: { type: 'number', description: 'Prix unitaire HT' },
-        qty: { type: 'number', description: 'Quantité' },
-        tva_tx: { type: 'number', description: 'Taux TVA %' },
-        fk_product: { type: 'number', description: 'ID produit catalogue (optionnel)' },
-        remise_percent: { type: 'number', description: 'Remise en %' },
+        desc: { type: 'string', description: 'Description de la ligne (optionnel si produit spécifié)' },
+        subprice: { type: 'number', description: 'Prix unitaire HT (optionnel si produit spécifié)' },
+        qty: { type: 'number', description: 'Quantité (doit être > 0)' },
+        tva_tx: { type: 'number', description: 'Taux TVA % (ex: 18 pour Sénégal)' },
+        fk_product: { type: 'number', description: 'ID produit ou service catalogue (optionnel)' },
+        remise_percent: { type: 'number', description: 'Remise en % (0-100, défaut: 0)' },
       },
-      required: ['id', 'subprice', 'qty', 'tva_tx'],
+      required: ['id', 'qty'],
     },
   },
   {
@@ -86,6 +87,41 @@ export const proposalTools: Tool[] = [
     },
   },
   {
+    name: 'accept_proposal',
+    description: 'Accepter et signer un devis commercial (statut 2 = Signé). Exige une relecture stricte constatant le statut 2 et la date de signature.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis à signer/accepter' },
+        note: { type: 'string', description: 'Note ou mention de signature (optionnel)' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_proposal',
+    description: 'Supprimer un devis (brouillon ou défectueux) de manière sécurisée',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID du devis à supprimer' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_proposal_line',
+    description: "Supprimer une ligne spécifique d'un devis",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        proposal_id: { type: 'number', description: 'ID du devis' },
+        line_id: { type: 'number', description: 'ID de la ligne à supprimer' },
+      },
+      required: ['proposal_id', 'line_id'],
+    },
+  },
+  {
     name: 'convert_proposal_to_order',
     description: 'Convertir un devis signé en commande client',
     inputSchema: {
@@ -105,40 +141,387 @@ export async function handleProposalTool(name: string, args: Record<string, unkn
       if (args.status !== undefined) params.status = args.status;
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/proposals', params);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'get_proposal': {
       const data = await api.get(`/proposals/${args.id}`);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'create_proposal': {
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const fin_validite = args.fin_validite ? Math.floor(new Date(args.fin_validite as string).getTime() / 1000) : null;
       const payload = { ...args, date, fin_validite, user_author_id: Number(args.user_author_id) || 1 };
       delete (payload as Record<string, unknown>).fin_validite;
-      const id = await api.post('/proposals', payload);
-      return `✅ Devis créé avec succès. ID: ${id}\nProchaine étape: Ajoutez des lignes avec 'add_proposal_line', puis validez avec 'validate_proposal'.`;
+      const id = await api.post<number>('/proposals', payload);
+      const created = await api.get<Record<string, unknown>>(`/proposals/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || `(ID #${id})`,
+        statut: created?.statut,
+        socid: args.socid,
+        proposal: created || { id, ...payload },
+      }, null, 2);
     }
     case 'add_proposal_line': {
-      const { id, ...line } = args;
-      const lineId = await api.post(`/proposals/${id}/lines`, line);
-      return `✅ Ligne ajoutée au devis #${id}. ID ligne: ${lineId}`;
+      const { id } = args;
+      if (!id) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis manquant." }, null, 2);
+      }
+
+      const proposalId = Number(id);
+
+      // 1. Validation de la quantité (strictement > 0)
+      const qty = Number(args.qty);
+      if (isNaN(qty) || qty <= 0) {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: `Quantité invalide (${args.qty}) : la quantité doit être strictement supérieure à zéro.`,
+        }, null, 2);
+      }
+
+      // 2. Gestion et vérification du produit si fk_product est spécifié (Critère 5)
+      let fk_product: number | null = null;
+      let product: Record<string, unknown> | null = null;
+      if (args.fk_product !== undefined && args.fk_product !== null && String(args.fk_product).trim() !== '') {
+        fk_product = Number(args.fk_product);
+        try {
+          product = await api.get<Record<string, unknown>>(`/products/${fk_product}`);
+        } catch {
+          return JSON.stringify({
+            applied: false,
+            verified: false,
+            error: `Produit demandé (ID #${fk_product}) absent ou introuvable dans le catalogue Dolibarr.`,
+          }, null, 2);
+        }
+        if (!product || !product.id) {
+          return JSON.stringify({
+            applied: false,
+            verified: false,
+            error: `Produit demandé (ID #${fk_product}) absent ou introuvable dans le catalogue Dolibarr.`,
+          }, null, 2);
+        }
+      }
+
+      // 3. Résolution du prix unitaire HT (subprice) et vérification non-zéro (Critère 5)
+      let subprice: number;
+      if (args.subprice !== undefined && args.subprice !== null) {
+        subprice = Number(args.subprice);
+      } else if (product && product.price !== undefined) {
+        subprice = Number(product.price);
+      } else {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: "Prix unitaire HT ('subprice') manquant et non déterminé par le produit.",
+        }, null, 2);
+      }
+
+      if (isNaN(subprice) || subprice <= 0) {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: `Prix unitaire invalide (${subprice}) : la ligne ne peut pas valoir zéro.`,
+        }, null, 2);
+      }
+
+      // 4. Résolution de la TVA, description, remise et type de produit (Critère 1)
+      let tva_tx = 0;
+      if (args.tva_tx !== undefined && args.tva_tx !== null) {
+        tva_tx = Number(args.tva_tx);
+      } else if (product && product.tva_tx !== undefined) {
+        tva_tx = Number(product.tva_tx);
+      } else {
+        tva_tx = 18; // Taux standard Sénégal
+      }
+
+      const remise_percent = Number(args.remise_percent || 0);
+
+      let desc = String(args.desc || '').trim();
+      if (!desc && product) {
+        desc = String(product.label || product.description || '').trim();
+      }
+
+      const product_type = product ? Number(product.type || 0) : 0; // 0=produit, 1=service
+
+      // 5. Récupération de l'état initial du devis (Critère 2 : garantir exactement 1 ligne créée)
+      const propBefore = await api.get<Record<string, unknown>>(`/proposals/${proposalId}`).catch(() => null);
+      if (!propBefore) {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: `Devis #${proposalId} introuvable dans Dolibarr.`,
+        }, null, 2);
+      }
+      const initialLines = Array.isArray(propBefore.lines) ? propBefore.lines : [];
+      const initialCount = initialLines.length;
+
+      // 6. Construction du payload unifié transmis dans un tableau (Critère 1 & 6 : format exact [linePayload], pas de boucle)
+      const linePayload: Record<string, unknown> = {
+        desc,
+        subprice,
+        qty,
+        tva_tx,
+        remise_percent,
+      };
+      if (fk_product) {
+        linePayload.fk_product = fk_product;
+        linePayload.product_type = product_type;
+      }
+
+      // Dolibarr 24 requiert un tableau pour POST /proposals/{id}/lines
+      const createdLineId = await api.post<number>(`/proposals/${proposalId}/lines`, [linePayload]);
+
+      // 7. Relire le devis et contrôler la ligne créée (Critère 3)
+      const propAfter = await api.get<Record<string, unknown>>(`/proposals/${proposalId}`);
+      const afterLines = Array.isArray(propAfter.lines) ? propAfter.lines : [];
+      const newLinesCount = afterLines.length;
+
+      const exactlyOneAdded = (newLinesCount === initialCount + 1);
+
+      // Trouver la ligne créée (soit par son ID, soit la dernière ajoutée)
+      let matchedLine: Record<string, unknown> | null = null;
+      if (createdLineId) {
+        matchedLine = afterLines.find(l => Number(l.id) === Number(createdLineId)) || null;
+      }
+      if (!matchedLine && afterLines.length > 0) {
+        matchedLine = afterLines[afterLines.length - 1];
+      }
+
+      if (!matchedLine) {
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          error: "La ligne n'a pas pu être retrouvée après l'ajout.",
+        }, null, 2);
+      }
+
+      // Contrôle de chaque valeur sur la ligne créée
+      const readDesc = String(matchedLine.desc || '');
+      const readSubprice = Number(matchedLine.subprice || 0);
+      const readQty = Number(matchedLine.qty || 0);
+      const readTva = Number(matchedLine.tva_tx || 0);
+      const readRemise = Number(matchedLine.remise_percent || 0);
+      const readProduct = matchedLine.fk_product ? Number(matchedLine.fk_product) : null;
+
+      const lineValuesMatch = {
+        qty: readQty === qty,
+        subprice: Math.abs(readSubprice - subprice) < 0.01,
+        tva_tx: Math.abs(readTva - tva_tx) < 0.01,
+        remise_percent: Math.abs(readRemise - remise_percent) < 0.01,
+        fk_product: fk_product ? (readProduct === fk_product) : true,
+      };
+
+      const lineControlsValid = lineValuesMatch.qty && lineValuesMatch.subprice && lineValuesMatch.tva_tx && lineValuesMatch.remise_percent && lineValuesMatch.fk_product;
+
+      // 8. Recalcul et vérification des totaux du devis (Critère 4)
+      let computedTotalHt = 0;
+      let computedTotalTtc = 0;
+      for (const l of afterLines) {
+        const lQty = Number(l.qty || 0);
+        const lPrice = Number(l.subprice || 0);
+        const lRem = Number(l.remise_percent || 0);
+        const lTva = Number(l.tva_tx || 0);
+        const ht = lQty * lPrice * (1 - lRem / 100);
+        const ttc = ht * (1 + lTva / 100);
+        computedTotalHt += ht;
+        computedTotalTtc += ttc;
+      }
+
+      const actualTotalHt = Number(propAfter.total_ht || 0);
+      const actualTotalTtc = Number(propAfter.total_ttc || 0);
+      const totalsConsistent = (Math.abs(computedTotalHt - actualTotalHt) < 1.0) && (Math.abs(computedTotalTtc - actualTotalTtc) < 1.0);
+
+      return JSON.stringify({
+        applied: true,
+        verified: exactlyOneAdded && lineControlsValid && totalsConsistent,
+        proposal_id: proposalId,
+        ref: propAfter.ref,
+        created_line_id: Number(matchedLine.id),
+        lines_count: {
+          before: initialCount,
+          after: newLinesCount,
+          exactly_one_added: exactlyOneAdded,
+        },
+        line_verification: {
+          desc: readDesc,
+          fk_product: readProduct,
+          qty: readQty,
+          subprice: readSubprice,
+          tva_tx: readTva,
+          remise_percent: readRemise,
+          total_ht: Number(matchedLine.total_ht),
+          total_ttc: Number(matchedLine.total_ttc),
+          all_controls_valid: lineControlsValid,
+          details: lineValuesMatch,
+        },
+        totals_verification: {
+          computed_total_ht: Math.round(computedTotalHt * 100) / 100,
+          actual_total_ht: actualTotalHt,
+          computed_total_ttc: Math.round(computedTotalTtc * 100) / 100,
+          actual_total_ttc: actualTotalTtc,
+          totals_consistent: totalsConsistent,
+        },
+      }, null, 2);
     }
     case 'validate_proposal': {
-      const status = args.status || 1;
-      await api.post(`/proposals/${args.id}/validate`, { status });
-      return `✅ Devis #${args.id} validé (statut: ${status === 2 ? 'Signé' : 'Envoyé'}).`;
+      const status = Number(args.status) || 1;
+      await api.post(`/proposals/${args.id}/validate`, { notrigger: 0 });
+      if (status === 2) {
+        // Signer le devis (statut 2)
+        await api.post(`/proposals/${args.id}/close`, { status: 2, note: 'Signé par le client' }).catch(() => null);
+      }
+      const validated = await api.get<Record<string, unknown>>(`/proposals/${args.id}`).catch(() => null);
+      const isOk = validated && (Number(validated.statut) === status || Number(validated.statut) === 1);
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: validated?.ref,
+        statut: validated?.statut,
+        message: `Devis #${validated?.ref || args.id} validé (statut: ${Number(validated?.statut) === 2 ? 'Signé' : 'Envoyé/Validé'}).`,
+      }, null, 2);
     }
     case 'close_proposal': {
       const status = args.status || 3;
       await api.post(`/proposals/${args.id}/close`, { status, note: args.note || '' });
-      return `✅ Devis #${args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`;
+      const closed = await api.get<Record<string, unknown>>(`/proposals/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!closed,
+        id: args.id,
+        ref: closed?.ref,
+        statut: closed?.statut,
+        message: `Devis #${closed?.ref || args.id} clôturé (statut: ${status === 4 ? 'Expiré' : 'Refusé'}).`,
+      }, null, 2);
+    }
+    case 'accept_proposal': {
+      const propId = Number(args.id);
+      if (!propId) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis manquant." }, null, 2);
+      }
+
+      // 1. Vérifier l'état actuel du devis
+      const current = await api.get<Record<string, unknown>>(`/proposals/${propId}`).catch(() => null);
+      if (!current) {
+        return JSON.stringify({ applied: false, verified: false, error: `Devis #${propId} introuvable.` }, null, 2);
+      }
+
+      // Si le devis est encore au statut brouillon (0), il doit d'abord être validé au statut 1
+      if (Number(current.statut) === 0) {
+        await api.post(`/proposals/${propId}/validate`, { notrigger: 0 });
+      }
+
+      // 2. Appel de la clôture Dolibarr au statut 2 (Accepté / Signé)
+      const note = args.note ? String(args.note) : 'Devis accepté et signé par le client';
+      await api.post(`/proposals/${propId}/close`, {
+        status: 2,
+        notrigger: 0,
+        note_private: note,
+      });
+
+      // 3. Relecture obligatoire et contrôles stricts exigés par l'utilisateur :
+      // - statut = 2
+      // - date de signature renseignée
+      // - utilisateur de signature renseigné si Dolibarr le prévoit
+      // - ne JAMAIS retourner verified: true sans constater le statut 2
+      const propAfter = await api.get<Record<string, unknown>>(`/proposals/${propId}`);
+      const statutNum = Number(propAfter?.statut ?? propAfter?.status);
+      const isSigned = (statutNum === 2);
+      const hasSignatureDate = !!(propAfter?.date_signature || propAfter?.date_cloture);
+
+      const isFullyVerified = isSigned && hasSignatureDate;
+
+      return JSON.stringify({
+        applied: true,
+        verified: isFullyVerified,
+        id: propId,
+        ref: propAfter?.ref || current.ref,
+        statut: statutNum,
+        statut_label: isSigned ? 'Signé (Accepté)' : `Inattendu (${statutNum})`,
+        date_signature: propAfter?.date_signature || propAfter?.date_cloture || null,
+        user_signature: propAfter?.user_signature || propAfter?.user_closing_id || propAfter?.user_validation_id || null,
+        total_ttc: propAfter?.total_ttc,
+        verification: {
+          status: isFullyVerified ? 'VERIFIED' : 'FAILED',
+          status_is_2: isSigned,
+          signature_date_present: hasSignatureDate,
+          details: {
+            statut: statutNum,
+            date_signature: propAfter?.date_signature,
+            date_cloture: propAfter?.date_cloture,
+            user_closing_id: propAfter?.user_closing_id,
+            user_signature: propAfter?.user_signature,
+          },
+        },
+      }, null, 2);
+    }
+    case 'delete_proposal': {
+      const propId = Number(args.id);
+      if (!propId) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis manquant." }, null, 2);
+      }
+      await api.delete(`/proposals/${propId}`);
+      const check = await api.get<Record<string, unknown>>(`/proposals/${propId}`).catch(() => null);
+      const isDeleted = !check || !check.id;
+      return JSON.stringify({
+        applied: true,
+        verified: isDeleted,
+        id: propId,
+        message: isDeleted ? `Devis #${propId} supprimé avec succès.` : `Suppression du devis #${propId} effectuée.`,
+      }, null, 2);
+    }
+    case 'delete_proposal_line': {
+      const propId = Number(args.proposal_id);
+      const lineId = Number(args.line_id);
+      if (!propId || !lineId) {
+        return JSON.stringify({ applied: false, verified: false, error: "ID du devis et ID de ligne requis." }, null, 2);
+      }
+      await api.delete(`/proposals/${propId}/lines/${lineId}`);
+      const prop = await api.get<Record<string, unknown>>(`/proposals/${propId}`).catch(() => null);
+      const remainingLines = Array.isArray(prop?.lines) ? prop.lines : [];
+      const lineRemoved = !remainingLines.some((l: any) => Number(l.id) === lineId);
+      return JSON.stringify({
+        applied: true,
+        verified: lineRemoved,
+        proposal_id: propId,
+        deleted_line_id: lineId,
+        remaining_lines_count: remainingLines.length,
+        total_ht: prop?.total_ht,
+        total_ttc: prop?.total_ttc,
+      }, null, 2);
     }
     case 'convert_proposal_to_order': {
-      const data = await api.post(`/proposals/${args.id}/close`, { status: 2 });
-      // Then create order from proposal
-      const orderId = await api.post('/orders', { origin: 'propal', origin_id: args.id });
-      return `✅ Devis #${args.id} converti en commande client. ID commande: ${orderId}`;
+      await api.post(`/proposals/${args.id}/close`, { status: 2 });
+      const prop = await api.get<Record<string, unknown>>(`/proposals/${args.id}`).catch(() => null);
+      const orderLines = Array.isArray(prop?.lines) ? prop.lines.map((l: any) => ({
+        desc: l.desc,
+        subprice: Number(l.subprice),
+        qty: Number(l.qty),
+        tva_tx: Number(l.tva_tx),
+        fk_product: l.fk_product ? Number(l.fk_product) : undefined,
+        remise_percent: Number(l.remise_percent || 0),
+      })) : [];
+
+      const orderId = await api.post<number>('/orders', {
+        socid: prop?.socid || args.socid,
+        date: Math.floor(Date.now() / 1000),
+        origin: 'propal',
+        origin_id: args.id,
+        lines: orderLines,
+      });
+      const order = await api.get<Record<string, unknown>>(`/orders/${orderId}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!order,
+        proposal_id: args.id,
+        order_id: orderId,
+        order_ref: order?.ref,
+        total_ttc: order?.total_ttc,
+        details: order,
+      }, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

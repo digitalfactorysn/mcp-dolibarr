@@ -130,6 +130,7 @@ export const projectTools: Tool[] = [
       type: 'object',
       properties: {
         project_id: { type: 'number', description: 'ID du projet parent' },
+        ref: { type: 'string', description: "Référence unique de la tâche (ex: 'TK2610-001'). Optionnel: générée automatiquement si omise." },
         label: { type: 'string', description: 'Titre de la tâche' },
         description: { type: 'string', description: 'Description de la tâche' },
         date_start: { type: 'string', description: 'Date de début ISO 8601' },
@@ -190,9 +191,10 @@ export const contractTools: Tool[] = [
       type: 'object',
       properties: {
         socid: { type: 'number', description: 'ID du tiers' },
-        date: { type: 'string', description: 'Date du contrat ISO 8601' },
-        date_start: { type: 'string', description: 'Date de début de service ISO 8601' },
-        date_end: { type: 'string', description: "Date de fin de contrat ISO 8601" },
+        date: { type: 'string', description: 'Date du contrat ISO 8601 (ex: 2026-10-12)' },
+        date_contrat: { type: 'number', description: 'Timestamp unix du contrat (optionnel)' },
+        commercial_signature_id: { type: 'number', description: 'ID du commercial signature (défaut: 1)' },
+        commercial_suivi_id: { type: 'number', description: 'ID du commercial suivi (défaut: 1)' },
         note_public: { type: 'string', description: 'Description / objet du contrat' },
       },
       required: ['socid'],
@@ -277,9 +279,47 @@ export async function handleProjectTool(name: string, args: Record<string, unkno
     case 'create_task': {
       const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
       const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date_start, date_end };
-      const id = await api.post('/tasks', { ...payload, fk_project: args.project_id });
-      return `✅ Tâche créée dans le projet #${args.project_id}. ID tâche: ${id}\nLabel: ${args.label}`;
+
+      // Récupérer le projet parent pour contextualiser et valider
+      const project = await api.get<Record<string, unknown>>(`/projects/${args.project_id}`).catch(() => null);
+
+      // Génération automatique de référence si non spécifiée ou 'auto'
+      let ref = (args.ref as string | undefined)?.trim();
+      if (!ref || ref.toLowerCase() === 'auto') {
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        ref = `TK${yy}${mm}-${rand}`;
+      }
+
+      const payload = {
+        ...args,
+        ref,
+        fk_project: args.project_id,
+        date_start,
+        date_end,
+      };
+
+      const id = await api.post<number>('/tasks', payload);
+
+      // Relecture immédiate pour vérification de l'état
+      const created = await api.get<Record<string, unknown>>(`/tasks/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || ref,
+        parent_project: {
+          id: args.project_id,
+          ref: project?.ref,
+          title: project?.title,
+        },
+        label: created?.label || args.label,
+        verification_status: created ? 'VERIFIED' : 'FAILED_READBACK',
+        task: created || { id, ...payload },
+      }, null, 2);
     }
     default:
       throw new Error(`Outil Projet inconnu: ${name}`);
@@ -317,12 +357,48 @@ export async function handleContractTool(name: string, args: Record<string, unkn
       return JSON.stringify(data, null, 2);
     }
     case 'create_contract': {
-      const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
-      const date_start = args.date_start ? Math.floor(new Date(args.date_start as string).getTime() / 1000) : null;
-      const date_end = args.date_end ? Math.floor(new Date(args.date_end as string).getTime() / 1000) : null;
-      const payload = { ...args, date, date_start, date_end };
-      const id = await api.post('/contracts', payload);
-      return `✅ Contrat créé pour le tiers #${args.socid}. ID contrat: ${id}`;
+      const socid = Number(args.socid);
+      let dateContratTs: number;
+      if (typeof args.date_contrat === 'number') {
+        dateContratTs = args.date_contrat;
+      } else if (typeof args.date_contrat === 'string') {
+        const p = new Date(args.date_contrat).getTime();
+        dateContratTs = isNaN(p) ? Math.floor(Date.now() / 1000) : Math.floor(p / 1000);
+      } else if (typeof args.date === 'string') {
+        const p = new Date(args.date).getTime();
+        dateContratTs = isNaN(p) ? Math.floor(Date.now() / 1000) : Math.floor(p / 1000);
+      } else {
+        dateContratTs = Math.floor(Date.now() / 1000);
+      }
+
+      const commercialSignatureId = Number(args.commercial_signature_id) || 1;
+      const commercialSuiviId = Number(args.commercial_suivi_id) || 1;
+
+      const payload: Record<string, unknown> = {
+        socid,
+        date_contrat: dateContratTs,
+        commercial_signature_id: commercialSignatureId,
+        commercial_suivi_id: commercialSuiviId,
+      };
+      if (args.note_public) payload.note_public = args.note_public;
+      if (args.note_private) payload.note_private = args.note_private;
+      if (args.ref_customer) payload.ref_customer = args.ref_customer;
+      if (args.ref_supplier) payload.ref_supplier = args.ref_supplier;
+
+      const id = await api.post<number>('/contracts', payload);
+      const contract = await api.get<Record<string, unknown>>(`/contracts/${id}`).catch(() => null);
+
+      return JSON.stringify({
+        applied: true,
+        verified: !!contract,
+        contract_id: id,
+        ref: contract?.ref,
+        socid,
+        date_contrat: dateContratTs,
+        commercial_signature_id: commercialSignatureId,
+        commercial_suivi_id: commercialSuiviId,
+        contract: contract || { id, socid, date_contrat: dateContratTs },
+      }, null, 2);
     }
     default:
       throw new Error(`Outil Contrat inconnu: ${name}`);

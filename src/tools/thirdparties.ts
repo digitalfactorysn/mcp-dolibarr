@@ -46,6 +46,8 @@ export const thirdpartyTools: Tool[] = [
         country_id: { type: 'number', description: 'ID pays (ex: 221 pour Sénégal)' },
         tva_intracom: { type: 'string', description: 'Numéro TVA intracommunautaire' },
         siret: { type: 'string', description: 'SIRET ou NINEA' },
+        code_client: { type: 'string', description: "Code client (optionnel, 'auto' ou '-1' pour génération automatique)" },
+        code_fournisseur: { type: 'string', description: "Code fournisseur (optionnel, 'auto' ou '-1' pour génération automatique)" },
         note_public: { type: 'string', description: 'Note publique sur le tiers' },
         note_private: { type: 'string', description: 'Note privée sur le tiers' },
         codecompta: { type: 'string', description: 'Code comptable du tiers' },
@@ -139,17 +141,79 @@ export async function handleThirdpartyTool(name: string, args: Record<string, un
       return JSON.stringify(data, null, 2);
     }
     case 'create_thirdparty': {
-      const id = await api.post('/thirdparties', args);
-      return `✅ Tiers créé avec succès. ID: ${id}\nNom: ${args.name}`;
+      const payload: Record<string, unknown> = { ...args };
+      const route = '/thirdparties';
+
+      // 1. Accepter une création avec seulement name
+      // Traiter correctement client et fournisseur uniquement si spécifiés
+      if (args.client !== undefined && args.client !== null) {
+        payload.client = Number(args.client);
+        // Si client > 0 (1=client, 2=prospect, 3=client+prospect), Dolibarr exige un code_client (-1 déclenche la numérotation automatique)
+        if (Number(payload.client) > 0 && (!payload.code_client || payload.code_client === 'auto')) {
+          payload.code_client = '-1';
+        }
+      }
+
+      if (args.fournisseur !== undefined && args.fournisseur !== null) {
+        payload.fournisseur = Number(args.fournisseur);
+        // Si fournisseur = 1, Dolibarr exige un code_fournisseur (-1 déclenche la numérotation automatique)
+        if (Number(payload.fournisseur) === 1 && (!payload.code_fournisseur || payload.code_fournisseur === 'auto')) {
+          payload.code_fournisseur = '-1';
+        }
+      }
+
+      console.log(`[create_thirdparty] Route utilisée : POST ${route}`);
+      console.log(`[create_thirdparty] Payload envoyé :`, JSON.stringify(payload));
+
+      try {
+        const id = await api.post<number>(route, payload);
+
+        // 2. Relecture immédiate après création
+        const created = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
+
+        return JSON.stringify({
+          applied: true,
+          verified: !!created,
+          circuit_breaker: 'NORMAL',
+          route_used: `POST ${route}`,
+          id: Number(id),
+          name: created?.name || args.name,
+          client: created?.client ?? payload.client,
+          fournisseur: created?.fournisseur ?? payload.fournisseur,
+          code_client: created?.code_client,
+          code_fournisseur: created?.code_fournisseur,
+          status: created?.status,
+          verification: {
+            status: created ? 'VERIFIED' : 'UNVERIFIED',
+            readback_id: created?.id,
+            details: created,
+          },
+          thirdparty: created || { id, ...payload },
+        }, null, 2);
+      } catch (err: any) {
+        console.error(`[create_thirdparty] Erreur Dolibarr sur POST ${route}:`, err);
+        return JSON.stringify({
+          applied: false,
+          verified: false,
+          circuit_breaker: 'TRIGGERED',
+          route_used: `POST ${route}`,
+          error: err.message,
+          dolibarr_error_body: err.dolibarrData || null,
+          payload_sent: payload,
+        }, null, 2);
+      }
     }
     case 'update_thirdparty': {
       const { id, ...rest } = args;
-      try {
-        await api.put(`/thirdparties/${id}`, rest);
-        return `✅ Tiers #${id} mis à jour.`;
-      } catch (_e) {
-        return `⚠️ Note: L'API Dolibarr requiert tous les champs obligatoires pour la mise à jour. Utilisez l'interface web pour les modifications complexes, ou fournissez tous les champs du tiers (name, status, client, country_id...).`;
-      }
+      await api.put(`/thirdparties/${id}`, rest);
+      const updated = await api.get<Record<string, unknown>>(`/thirdparties/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!updated,
+        id,
+        name: updated?.name,
+        thirdparty: updated || { id, ...rest },
+      }, null, 2);
     }
     case 'get_thirdparty_invoices': {
       const data = await api.get('/invoices', { thirdparty_ids: args.id, limit: 200 });

@@ -8,14 +8,26 @@ services:
     container_name: mcp-dolibarr
     restart: unless-stopped
     ports:
-      - "3100:3100"
+      # Audit 26/11/2026 : port publie seulement en local ; le proxy HTTPS (Nginx Proxy Manager) joint
+      # le conteneur par le reseau 1panel-network (mcp-dolibarr:3100).
+      - "127.0.0.1:3100:3100"
     environment:
       - DOLIBARR_URL=${DOLIBARR_URL}
       - DOLIBARR_API_KEY=${DOLIBARR_API_KEY}
       - PORT=3100
-      - MCP_API_TOKEN=${MCP_API_TOKEN:-}
+      - HOST=0.0.0.0
+      - MCP_API_TOKEN=${MCP_API_TOKEN:?MCP_API_TOKEN obligatoire}
+      - MCP_ALLOWED_HOSTS=${MCP_ALLOWED_HOSTS:-mcp.digitalfactory.sn}
+      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-}
+      - MCP_READ_ONLY=${MCP_READ_ONLY:-}
+      - MCP_DISABLED_TOOLS=${MCP_DISABLED_TOOLS:-}
     networks:
       - 1panel-network
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     mem_limit: 256m
     memswap_limit: 256m
     logging:

@@ -31,7 +31,7 @@ fi
 
 # ── 2. Installer les dépendances ──
 echo "📦 Installation des dépendances..."
-npm install
+npm ci
 
 # ── 3. Compiler TypeScript ──
 echo "🔨 Compilation TypeScript..."
@@ -48,10 +48,12 @@ DOLIBARR_API_KEY=VOTRE_CLE_API_DOLIBARR
 # Port d'écoute (défaut : 3000)
 PORT=3000
 
-# Token d'authentification optionnel pour protéger l'endpoint MCP
-# Si défini, les clients doivent envoyer : Authorization: Bearer <token>
-# MCP_API_TOKEN=un_token_secret_fort
+# Jeton d'authentification OBLIGATOIRE (audit 26/11/2026) : généré automatiquement.
+# Les clients envoient : Authorization: Bearer <jeton>
+MCP_API_TOKEN=$(openssl rand -hex 32)
+MCP_ALLOWED_HOSTS=$DOMAIN
 EOF
+  chmod 600 "$APP_DIR/.env"
   echo "⚠️  Éditez $APP_DIR/.env avec vos vraies valeurs !"
 fi
 

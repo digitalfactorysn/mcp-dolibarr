@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { DolibarrAPI } from '../api.js';
+import { maskPaymentUrls } from '../utils/security.js';
 
 export const invoiceTools: Tool[] = [
   {
@@ -157,40 +158,124 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
       if (args.thirdparty_ids) params.thirdparty_ids = args.thirdparty_ids;
       if (args.sqlfilters) params.sqlfilters = args.sqlfilters;
       const data = await api.get('/invoices', params);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'get_invoice': {
       const data = await api.get(`/invoices/${args.id}`);
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(maskPaymentUrls(data), null, 2);
     }
     case 'create_invoice': {
+      // 1. Anti-doublon / Protection workflow classification : vérifier si la commande source est déjà facturée
+      if (args.origin_id || args.origin) {
+        const originId = Number(args.origin_id || args.origin);
+        const originType = String(args.origin_type || 'commande').toLowerCase();
+        if (originType.includes('commande') || originType.includes('order')) {
+          const order = await api.get<Record<string, unknown>>(`/orders/${originId}`).catch(() => null);
+          if (order && (order.billed === 1 || order.billed === '1')) {
+            return JSON.stringify({
+              applied: false,
+              verified: true,
+              duplicate_prevented: true,
+              error: `Création de facture en double empêchée : la commande #${originId} (${order.ref}) est déjà classée facturée (statut billed=1).`,
+              order_id: originId,
+              order_ref: order.ref,
+              order_billed: order.billed,
+            }, null, 2);
+          }
+        }
+      }
+
+      // 2. Anti-doublon par ref_client si spécifiée pour le même tiers
+      if (args.ref_client && args.socid) {
+        const existingByRef = await api.get<Array<Record<string, unknown>>>('/invoices', {
+          thirdparty_ids: args.socid,
+          sqlfilters: `(t.ref_client:like:'${String(args.ref_client).replace(/'/g, '')}')`,
+          limit: 1,
+        }).catch(() => null);
+
+        if (Array.isArray(existingByRef) && existingByRef.length > 0) {
+          const dup = existingByRef[0];
+          return JSON.stringify({
+            applied: false,
+            verified: true,
+            duplicate_prevented: true,
+            error: `Création de facture en double empêchée : une facture avec la référence client '${args.ref_client}' existe déjà pour ce tiers (Facture ${dup.ref}, ID #${dup.id}).`,
+            existing_invoice_id: dup.id,
+            existing_invoice_ref: dup.ref,
+          }, null, 2);
+        }
+      }
+
       const date = args.date ? Math.floor(new Date(args.date as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
       const payload = { ...args, date, fk_user_author: Number(args.fk_user_author) || 1 };
       delete (payload as Record<string, unknown>).date;
-      const id = await api.post('/invoices', payload);
-      return `✅ Facture brouillon créée avec succès.\nID facture: ${id}\nTiers ID: ${args.socid}\nProchaine étape: Ajoutez des lignes avec 'add_invoice_line', puis validez avec 'validate_invoice'.`;
+      const id = await api.post<number>('/invoices', payload);
+      const created = await api.get<Record<string, unknown>>(`/invoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || `(ID #${id})`,
+        statut: created?.statut,
+        socid: args.socid,
+        invoice: created || { id, ...payload },
+      }, null, 2);
     }
     case 'add_invoice_line': {
       const { id, ...line } = args;
       if (!line.product_type) line.product_type = 1; // Service par défaut
       const lineId = await api.post(`/invoices/${id}/lines`, line);
-      return `✅ Ligne ajoutée à la facture #${id}. ID ligne: ${lineId}`;
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id: id,
+        line_id: lineId,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+        lines_count: Array.isArray(invoice?.lines) ? invoice.lines.length : undefined,
+      }, null, 2);
     }
     case 'update_invoice_line': {
       const { invoice_id, line_id, ...line } = args;
       await api.put(`/invoices/${invoice_id}/lines/${line_id}`, line);
-      return `✅ Ligne #${line_id} de la facture #${invoice_id} mise à jour.`;
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${invoice_id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id,
+        line_id,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+      }, null, 2);
     }
     case 'delete_invoice_line': {
       await api.delete(`/invoices/${args.invoice_id}/lines/${args.line_id}`);
-      return `✅ Ligne #${args.line_id} supprimée de la facture #${args.invoice_id}.`;
+      const invoice = await api.get<Record<string, unknown>>(`/invoices/${args.invoice_id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!invoice,
+        invoice_id: args.invoice_id,
+        deleted_line_id: args.line_id,
+        total_ht: invoice?.total_ht,
+        total_ttc: invoice?.total_ttc,
+      }, null, 2);
     }
     case 'validate_invoice': {
       await api.post(`/invoices/${args.id}/validate`, {
         idwarehouse: args.idwarehouse || 0,
         notrigger: 0,
       });
-      return `✅ Facture #${args.id} validée avec succès. Elle est maintenant officielle et envoyable au client.`;
+      const validated = await api.get<Record<string, unknown>>(`/invoices/${args.id}`).catch(() => null);
+      const isOk = validated && (String(validated.statut) === '1' || String(validated.statut) === '2');
+      return JSON.stringify({
+        applied: true,
+        verified: !!isOk,
+        id: args.id,
+        ref: validated?.ref,
+        statut: validated?.statut,
+        message: isOk ? `Facture #${validated?.ref || args.id} validée et vérifiée.` : `Validation soumise pour la facture #${args.id}.`,
+      }, null, 2);
     }
     case 'send_invoice_email': {
       const payload = {
@@ -200,7 +285,12 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
         attach_pdf: 1,
       };
       await api.post(`/invoices/${args.id}/sendbyemail`, payload);
-      return `✅ Facture #${args.id} envoyée par email à ${args.sendto}.`;
+      return JSON.stringify({
+        applied: true,
+        invoice_id: args.id,
+        recipient: args.sendto,
+        message: `Facture #${args.id} envoyée par email à ${args.sendto}.`,
+      }, null, 2);
     }
     case 'add_payment_to_invoice': {
       const payDate = args.datepaye ? Math.floor(new Date(args.datepaye as string).getTime() / 1000) : Math.floor(Date.now() / 1000);
@@ -215,7 +305,16 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
         amounts: { [args.id as string]: amount },
       };
       const paymentId = await api.post('/invoices/paymentsdistributed', payload);
-      return `✅ Paiement de ${amount} enregistré sur la facture #${args.id}. ID paiement: ${paymentId}`;
+      const reread = await api.get<Record<string, unknown>>(`/invoices/${args.id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!reread,
+        payment_id: paymentId,
+        invoice_id: args.id,
+        amount_paid: amount,
+        remaintopay: reread?.remaintopay,
+        paye: reread?.paye,
+      }, null, 2);
     }
     case 'create_credit_note': {
       const sourceInvoice = await api.get<Record<string, unknown>>(`/invoices/${args.source_invoice_id}`);
@@ -225,8 +324,16 @@ export async function handleInvoiceTool(name: string, args: Record<string, unkno
         fac_rec: args.source_invoice_id,
         note_public: args.description || `Avoir sur facture #${args.source_invoice_id}`,
       };
-      const id = await api.post('/invoices', payload);
-      return `✅ Avoir (facture de crédit) créé. ID: ${id}. Associé à la facture source #${args.source_invoice_id}.`;
+      const id = await api.post<number>('/invoices', payload);
+      const created = await api.get<Record<string, unknown>>(`/invoices/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        credit_note_id: id,
+        ref: created?.ref,
+        source_invoice_id: args.source_invoice_id,
+        details: created,
+      }, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);

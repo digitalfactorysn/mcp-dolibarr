@@ -19,7 +19,7 @@ jobs:
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
-          source: "src/,package*.json,tsconfig.json,Dockerfile,docker-compose.yml"
+          source: "src/,package*.json,tsconfig.json,Dockerfile,docker-compose.yml,.dockerignore"
           target: /opt/1panel/apps/mcp-dolibarr/
 
       - name: Rebuild Docker on VPS
@@ -30,20 +30,22 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           command_timeout: 15m
-          script_stop: false
+          script_stop: true
           script: |
+            set -euo pipefail
             cd /opt/1panel/apps/mcp-dolibarr
-            echo "=== Building Docker ==="
-            docker compose down --remove-orphans
-            docker compose build --no-cache 2>&1 | tail -30
-            BUILD_STATUS=${PIPESTATUS[0]}
-            if [ $BUILD_STATUS -eq 0 ]; then
-              docker compose up -d
-              sleep 10
-              echo "=== HEALTH CHECK ==="
-              curl -s https://mcp.digitalfactory.sn/health
-            else
-              echo "=== BUILD FAILED - keeping old container ==="
-              docker compose up -d --no-build || true
-              curl -s https://mcp.digitalfactory.sn/health
-            fi
+            # Audit 26/11/2026 : construction AVANT bascule ; si elle echoue, le service actuel continue et
+            # le deploiement est marque en echec (plus de relance silencieuse d'une ancienne image).
+            echo "=== Construction ==="
+            docker compose build --pull 2>&1 | tail -30
+            echo "=== Bascule ==="
+            docker compose up -d --remove-orphans
+            for i in $(seq 1 12); do
+              sleep 5
+              if [ "$(curl -s -o /dev/null -w '%{http_code}' https://mcp.digitalfactory.sn/health)" = "200" ]; then
+                echo "Service en ligne"; exit 0
+              fi
+            done
+            echo "Service non disponible apres bascule" >&2
+            docker compose logs --tail 20 mcp-dolibarr >&2
+            exit 1

@@ -1,11 +1,13 @@
 /**
- * src/server.ts — MCP Dolibarr v5.0 — COMPLET 100%
+ * src/server.ts — MCP Dolibarr v5.2.0 — COMPLET 100% + FONCTIONNALITÉS AVANCÉES
  * Digital Factory Senegal — https://digitalfactory.sn
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import dotenv from "dotenv";
 import { DolibarrAPI } from "./api.js";
+import { checkArguments, exposeTools, isToolEnabled, wrapResult, type ToolDefinition } from "./security/guard.js";
+import { logToolCall } from "./security/audit-log.js";
 
 import { thirdpartyTools, handleThirdpartyTool } from "./tools/thirdparties.js";
 import { invoiceTools, handleInvoiceTool } from "./tools/invoices.js";
@@ -33,8 +35,15 @@ import { accountingAdvancedTools, handleAccountingAdvancedTool } from "./tools/a
 import { accountingConfigTools, handleAccountingConfigTool } from "./tools/accounting_config.js";
 import { pricingTools, handlePricingTool } from "./tools/pricing.js";
 import { notificationTools, handleNotificationTool } from "./tools/notifications.js";
+import { advancedFeatureTools, handleAdvancedFeatureTool } from "./tools/advanced_features.js";
+import { accountingAdvancedOpsTools, handleAccountingAdvancedOpsTool } from "./tools/accounting_advanced_ops.js";
+import { workflowAndCronTools, handleWorkflowAndCronTool } from "./tools/workflows_and_cron.js";
+import { contractsProjectsOpsTools, handleContractsProjectsOpsTool } from "./tools/contracts_projects_ops.js";
+import { documentsExtrafieldsOpsTools, handleDocumentsExtrafieldsOpsTool } from "./tools/documents_extrafields_ops.js";
+import { adminOpsTools, handleAdminOpsTool } from "./tools/admin_ops.js";
+import { payrollSenegalTools, handlePayrollSenegalTool } from "./tools/payroll_senegal.js";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const ALL_TOOLS = [
   ...thirdpartyTools, ...invoiceTools, ...proposalTools,
@@ -50,9 +59,16 @@ const ALL_TOOLS = [
   ...donationTools, ...loanTools,
   ...expenseReportTools,
   ...accountingAdvancedTools,
-    ...accountingConfigTools,
+  ...accountingConfigTools,
   ...pricingTools,
   ...notificationTools,
+  ...advancedFeatureTools,
+  ...accountingAdvancedOpsTools,
+  ...workflowAndCronTools,
+  ...contractsProjectsOpsTools,
+  ...documentsExtrafieldsOpsTools,
+  ...adminOpsTools,
+  ...payrollSenegalTools,
 ];
 
 async function routeTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
@@ -90,6 +106,13 @@ async function routeTool(name: string, args: Record<string, unknown>, api: Dolib
     { tools: accountingConfigTools, h: handleAccountingConfigTool },
     { tools: pricingTools, h: handlePricingTool },
     { tools: notificationTools, h: handleNotificationTool },
+    { tools: advancedFeatureTools, h: handleAdvancedFeatureTool },
+    { tools: accountingAdvancedOpsTools, h: handleAccountingAdvancedOpsTool },
+    { tools: workflowAndCronTools, h: handleWorkflowAndCronTool },
+    { tools: contractsProjectsOpsTools, h: handleContractsProjectsOpsTool },
+    { tools: documentsExtrafieldsOpsTools, h: handleDocumentsExtrafieldsOpsTool },
+    { tools: adminOpsTools, h: handleAdminOpsTool },
+    { tools: payrollSenegalTools, h: handlePayrollSenegalTool },
   ];
   for (const { tools, h } of sets) {
     if (tools.map(t => t.name).includes(name)) return h(name, args, api);
@@ -102,14 +125,29 @@ export function createServer(): Server {
   const DOLIBARR_API_KEY = process.env.DOLIBARR_API_KEY;
   if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
   const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
-  const server = new Server({ name: "mcp-dolibarr", version: "5.0.0" }, { capabilities: { tools: {} } });
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
+  const server = new Server({ name: "mcp-dolibarr", version: "6.0.0" }, { capabilities: { tools: {} } });
+  // Audit 26/11/2026 : outils annotes et filtres (MCP_READ_ONLY, MCP_DISABLED_TOOLS), arguments
+  // controles avant tout appel (F-04), donnees renvoyees balisees comme non fiables (F-05), journal (F-09).
+  const tools = exposeTools(ALL_TOOLS as unknown as ToolDefinition[]);
+  const byName = new Map(tools.map((t) => [t.name, t]));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const { name, arguments: args } = req.params;
+    const { name, arguments: rawArgs } = req.params;
+    const t0 = Date.now();
+    const refuse = (text: string) => {
+      logToolCall(name, rawArgs, "refused", Date.now() - t0);
+      return { content: [{ type: "text" as const, text: `❌ ${text}` }], isError: true };
+    };
+    const tool = byName.get(name);
+    if (!tool || !isToolEnabled(name)) return refuse(`Outil indisponible : ${name}`);
+    const checked = checkArguments(tool, (rawArgs as Record<string, unknown>) || {});
+    if ("error" in checked) return refuse(checked.error);
     try {
-      const result = await routeTool(name, (args as Record<string, unknown>) || {}, api);
-      return { content: [{ type: "text" as const, text: result }] };
+      const result = await routeTool(name, checked.args, api);
+      logToolCall(name, checked.args, "ok", Date.now() - t0);
+      return { content: [{ type: "text" as const, text: wrapResult(result) }] };
     } catch (error) {
+      logToolCall(name, checked.args, "error", Date.now() - t0);
       return { content: [{ type: "text" as const, text: `❌ ${error instanceof Error ? error.message : 'Erreur inconnue'}` }], isError: true };
     }
   });

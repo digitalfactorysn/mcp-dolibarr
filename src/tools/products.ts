@@ -117,18 +117,34 @@ export async function handleProductTool(name: string, args: Record<string, unkno
         status: 1,
         status_buy: 1,
         tva_tx: 18,
+        barcode_type: args.barcode_type !== undefined ? args.barcode_type : 4,
+        barcode: args.barcode !== undefined ? args.barcode : -1,
         ...args,
       };
-      const id = await api.post('/products', payload);
-      return `✅ Produit/Service créé avec succès.
-ID: ${id}
-Ref: ${args.ref}
-Label: ${args.label}`;
+      const id = await api.post<number>('/products', payload);
+      const created = await api.get<Record<string, unknown>>(`/products/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!created,
+        id,
+        ref: created?.ref || args.ref,
+        label: created?.label || args.label,
+        price: created?.price,
+        product: created || { id, ...payload },
+      }, null, 2);
     }
     case 'update_product': {
       const { id, ...rest } = args;
       await api.put(`/products/${id}`, rest);
-      return `✅ Produit #${id} mis à jour.`;
+      const updated = await api.get<Record<string, unknown>>(`/products/${id}`).catch(() => null);
+      return JSON.stringify({
+        applied: true,
+        verified: !!updated,
+        id,
+        label: updated?.label,
+        price: updated?.price,
+        product: updated || { id, ...rest },
+      }, null, 2);
     }
     case 'get_product_stock': {
       const data = await api.get(`/products/${args.id}/stock`);
@@ -145,9 +161,17 @@ Label: ${args.label}`;
         type_mouvement: (args.qty as number) > 0 ? 0 : 1, // 0=Entrée, 1=Sortie
       };
       await api.post('/stockmovements', payload);
-      const direction = (args.qty as number) > 0 ? 'Entrée' : 'Sortie';
-      return `✅ Mouvement de stock enregistré.
-${direction} de ${Math.abs(args.qty as number)} unité(s) du produit #${args.product_id} dans l'entrepôt #${args.warehouse_id}.`;
+      const stock = await api.get<Record<string, unknown>>(`/products/${args.product_id}/stock`).catch(() => null);
+      const direction = (args.qty as number) > 0 ? 'Entree' : 'Sortie';
+      return JSON.stringify({
+        applied: true,
+        verified: !!stock,
+        product_id: args.product_id,
+        warehouse_id: args.warehouse_id,
+        qty: args.qty,
+        type: direction,
+        stock_details: stock,
+      }, null, 2);
     }
     default:
       throw new Error(`Outil inconnu: ${name}`);
