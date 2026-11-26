@@ -1,7 +1,8 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { DolibarrAPI } from "../api.js";
 
-const URL = "https://gestion.digitalfactory.sn";
+// Adresse web de l'instance configuree (DOLIBARR_URL sans /api/index.php), jamais codee en dur (audit F-10).
+const URL = (process.env.DOLIBARR_URL ?? "").replace(/\/api\/index\.php\/?$/, "").replace(/\/$/, "");
 
 export const accountingConfigTools: Tool[] = [
   {

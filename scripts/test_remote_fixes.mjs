@@ -3,9 +3,9 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import axios from 'axios';
 
 const MCP_URL = 'https://mcp.digitalfactory.sn/mcp';
-const MCP_TOKEN = '[SECRET_RETIRE]';
+const MCP_TOKEN = process.env.MCP_API_TOKEN; // jamais de jeton dans le code (audit 26/11/2026)
 const DOLIBARR_URL = 'https://gestion.digitalfactory.sn/api/index.php';
-const DOLIBARR_KEY = '[SECRET_RETIRE]';
+const DOLIBARR_KEY = process.env.DOLIBARR_API_KEY;
 
 async function testRemoteFixes() {
   console.log('🚀 Connecting to Remote MCP Dolibarr Server at', MCP_URL);

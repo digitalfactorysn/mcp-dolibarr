@@ -6,6 +6,8 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import dotenv from "dotenv";
 import { DolibarrAPI } from "./api.js";
+import { checkArguments, exposeTools, isToolEnabled, wrapResult, type ToolDefinition } from "./security/guard.js";
+import { logToolCall } from "./security/audit-log.js";
 
 import { thirdpartyTools, handleThirdpartyTool } from "./tools/thirdparties.js";
 import { invoiceTools, handleInvoiceTool } from "./tools/invoices.js";
@@ -41,7 +43,7 @@ import { documentsExtrafieldsOpsTools, handleDocumentsExtrafieldsOpsTool } from 
 import { adminOpsTools, handleAdminOpsTool } from "./tools/admin_ops.js";
 import { payrollSenegalTools, handlePayrollSenegalTool } from "./tools/payroll_senegal.js";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const ALL_TOOLS = [
   ...thirdpartyTools, ...invoiceTools, ...proposalTools,
@@ -124,18 +126,28 @@ export function createServer(): Server {
   if (!DOLIBARR_URL || !DOLIBARR_API_KEY) throw new Error("DOLIBARR_URL et DOLIBARR_API_KEY requis.");
   const api = new DolibarrAPI(DOLIBARR_URL, DOLIBARR_API_KEY);
   const server = new Server({ name: "mcp-dolibarr", version: "6.0.0" }, { capabilities: { tools: {} } });
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
+  // Audit 26/11/2026 : outils annotes et filtres (MCP_READ_ONLY, MCP_DISABLED_TOOLS), arguments
+  // controles avant tout appel (F-04), donnees renvoyees balisees comme non fiables (F-05), journal (F-09).
+  const tools = exposeTools(ALL_TOOLS as unknown as ToolDefinition[]);
+  const byName = new Map(tools.map((t) => [t.name, t]));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const { name, arguments: args } = req.params;
+    const { name, arguments: rawArgs } = req.params;
     const t0 = Date.now();
+    const refuse = (text: string) => {
+      logToolCall(name, rawArgs, "refused", Date.now() - t0);
+      return { content: [{ type: "text" as const, text: `❌ ${text}` }], isError: true };
+    };
+    const tool = byName.get(name);
+    if (!tool || !isToolEnabled(name)) return refuse(`Outil indisponible : ${name}`);
+    const checked = checkArguments(tool, (rawArgs as Record<string, unknown>) || {});
+    if ("error" in checked) return refuse(checked.error);
     try {
-      const result = await routeTool(name, (args as Record<string, unknown>) || {}, api);
-      const duration = Date.now() - t0;
-      console.error(`[MCP] Tool success: ${name} (${duration}ms)`);
-      return { content: [{ type: "text" as const, text: result }] };
+      const result = await routeTool(name, checked.args, api);
+      logToolCall(name, checked.args, "ok", Date.now() - t0);
+      return { content: [{ type: "text" as const, text: wrapResult(result) }] };
     } catch (error) {
-      const duration = Date.now() - t0;
-      console.error(`[MCP] Tool error: ${name} (${duration}ms) — ${error instanceof Error ? error.message : error}`);
+      logToolCall(name, checked.args, "error", Date.now() - t0);
       return { content: [{ type: "text" as const, text: `❌ ${error instanceof Error ? error.message : 'Erreur inconnue'}` }], isError: true };
     }
   });

@@ -1,4 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { maskSetupValue } from '../security/secrets.js';
 import { DolibarrAPI } from '../api.js';
 
 export const setupTools: Tool[] = [
@@ -137,6 +138,7 @@ export const setupTools: Tool[] = [
   },
 ];
 
+
 export async function handleSetupTool(name: string, args: Record<string, unknown>, api: DolibarrAPI): Promise<string> {
   switch (name) {
     case 'get_company_info': {
@@ -233,7 +235,7 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
             return JSON.stringify({
               documentation: "Lecture directe de constante exacte via get_setup_values.",
               constant: constName,
-              value: val,
+              value: maskSetupValue(constName, val),
               found: true,
             }, null, 2);
           }
@@ -275,8 +277,8 @@ export async function handleSetupTool(name: string, args: Record<string, unknown
       const resultObj: Record<string, unknown> = {};
       const entriesArr: Array<{ name: string; value: unknown }> = [];
       sliced.forEach(([k, v]) => {
-        resultObj[k] = v;
-        entriesArr.push({ name: k, value: v });
+        resultObj[k] = maskSetupValue(k, v);
+        entriesArr.push({ name: k, value: maskSetupValue(k, v) });
       });
       const hasMore = (page + 1) * limit < filtered.length;
 

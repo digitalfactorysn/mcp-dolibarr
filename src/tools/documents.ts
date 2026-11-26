@@ -22,7 +22,7 @@ export async function handleDocumentTool(name: string, args: Record<string, unkn
       return JSON.stringify(data, null, 2);
     }
     case 'delete_document': {
-      await api.delete(`/documents?modulepart=${args.modulepart}&original_file=${encodeURIComponent(args.original_file as string)}`);
+      await api.delete(`/documents?modulepart=${encodeURIComponent(String(args.modulepart))}&original_file=${encodeURIComponent(args.original_file as string)}`);
       return `✅ Document supprimé.`;
     }
     case 'generate_document_pdf': {

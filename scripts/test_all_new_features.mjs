@@ -2,7 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 const MCP_URL = 'https://mcp.digitalfactory.sn/mcp';
-const MCP_TOKEN = '[SECRET_RETIRE]';
+const MCP_TOKEN = process.env.MCP_API_TOKEN; // jamais de jeton dans le code (audit 26/11/2026)
 
 async function run() {
   console.log('🚀 Connecting to Remote MCP Dolibarr Server at', MCP_URL);

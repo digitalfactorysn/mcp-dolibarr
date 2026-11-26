@@ -7,7 +7,7 @@ import { handleAccountingConfigTool } from '../build/tools/accounting_config.js'
 dotenv.config();
 
 const URL = process.env.DOLIBARR_URL || 'https://gestion.digitalfactory.sn/api/index.php';
-const KEY = process.env.DOLIBARR_API_KEY || '[SECRET_RETIRE]';
+const KEY = process.env.DOLIBARR_API_KEY;
 
 async function runLiveValidation() {
   console.log('=== TEST DE VALIDATION LIVE DOLIBARR ===\n');

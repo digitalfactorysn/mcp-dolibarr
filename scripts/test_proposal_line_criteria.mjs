@@ -3,7 +3,7 @@ import { DolibarrAPI } from '../build/api.js';
 
 const api = new DolibarrAPI(
   'https://gestion.digitalfactory.sn/api/index.php',
-  '[SECRET_RETIRE]'
+  process.env.DOLIBARR_API_KEY
 );
 
 async function runTests() {

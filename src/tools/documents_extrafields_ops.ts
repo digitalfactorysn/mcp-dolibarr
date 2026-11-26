@@ -305,7 +305,13 @@ export async function handleDocumentsExtrafieldsOpsTool(
     }
 
     case 'set_object_extra_field': {
+      // Audit 26/11/2026 : seulement les objets metier annonces, jamais users, setup… (ecriture hors perimetre).
+      const EXTRA_FIELD_OBJECTS = ['thirdparties', 'invoices', 'products', 'projects', 'orders', 'proposals', 'contracts',
+        'supplierinvoices', 'supplierorders', 'interventions', 'tickets', 'contacts', 'members', 'shipments', 'tasks'];
       const oType = String(args.object_type);
+      if (!EXTRA_FIELD_OBJECTS.includes(oType)) {
+        return JSON.stringify({ applied: false, error: 'OBJECT_TYPE_NOT_ALLOWED', allowed: EXTRA_FIELD_OBJECTS }, null, 2);
+      }
       const oId = Number(args.object_id);
       const extra = args.extrafields as Record<string, unknown>;
 

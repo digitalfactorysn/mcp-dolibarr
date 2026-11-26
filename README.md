@@ -167,9 +167,21 @@ Une fois connecté, vous pouvez demander à votre IA :
 
 ## 🔐 Sécurité
 
+Version durcie suite à l'audit de sécurité du 26/11/2026 (OWASP MCP Top 10). Voir [SECURITY.md](SECURITY.md).
+
 - **Ne committez jamais** votre clé API dans un dépôt Git.
-- Utilisez un compte Dolibarr dédié avec les **permissions minimales** nécessaires.
-- La clé API est transmise uniquement entre votre machine locale et l'instance Dolibarr (pas via des services tiers).
+- Utilisez un compte Dolibarr dédié avec les **permissions minimales** nécessaires. Pour de la consultation,
+  une clé **sans droits d'écriture** et `MCP_READ_ONLY=1`.
+- **Mode HTTP** : `MCP_API_TOKEN` est obligatoire (le serveur refuse de démarrer sans), il écoute sur
+  `127.0.0.1` par défaut, n'accepte que les en-têtes `Host` de `MCP_ALLOWED_HOSTS` (protection DNS rebinding),
+  n'ouvre aucun CORS par défaut, expire les sessions inactives et limite le débit par adresse IP.
+  `/health` ne renvoie que `{"status":"ok"}`.
+- **Outils** : arguments contrôlés contre leur schéma (identifiants entiers positifs), aucune adresse d'API
+  ne peut sortir de son point prévu (`..` refusé), annotations `readOnlyHint` / `destructiveHint` pour que
+  votre client demande confirmation, `MCP_DISABLED_TOOLS` pour retirer des outils, `limit` plafonné.
+- **Données renvoyées** : les textes issus de Dolibarr sont balisés comme données non fiables
+  (protection contre l'injection de consignes cachées dans un ticket, une note, une fiche).
+- **Journal** : une ligne JSON par appel d'outil (outil, identifiants, issue, durée), sans contenu métier.
 
 ---
 
